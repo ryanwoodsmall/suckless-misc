@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	suckless 9base
 
 Group:		System Environment/Shells
@@ -52,6 +52,8 @@ make install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
 echo 'export PLAN9="%{inst_prefix}"' > %{buildroot}%{profiled}/zz_%{name}.sh
 echo 'export PATH="${PATH}:${PLAN9}/bin"' >> %{buildroot}%{profiled}/zz_%{name}.sh
+mkdir -p %{buildroot}/bin
+ln -s %{inst_prefix}/bin/rc %{buildroot}/bin/
 
 
 %clean
@@ -62,11 +64,13 @@ rm -rf %{_builddir}/%{name}
 %files
 %{inst_prefix}/*
 %{_sysconfdir}/profile.d/*%{name}*.sh
+/bin/rc
 
 
 %changelog
 * Tue Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - replace /usr/local/plan9 everywhere
+- add /bin/rc symlink
 
 * Tue Jan  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - ugly spec for building suckless 9base
