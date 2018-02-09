@@ -6,8 +6,9 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	2%{?dist}
+Release:	3%{?dist}
 Summary:	suckless 9base
+Source0:	%{name}
 
 Group:		System Environment/Shells
 License:	MIT
@@ -54,6 +55,8 @@ echo 'export PLAN9="%{inst_prefix}"' > %{buildroot}%{profiled}/zz_%{name}.sh
 echo 'export PATH="${PATH}:${PLAN9}/bin"' >> %{buildroot}%{profiled}/zz_%{name}.sh
 mkdir -p %{buildroot}/bin
 ln -s %{inst_prefix}/bin/rc %{buildroot}/bin/
+install -m 755 %SOURCE0 %{buildroot}%{inst_prefix}/bin
+ln -s %{inst_prefix}/bin/%{name} %{buildroot}%{inst_prefix}/bin/%{name}-box
 
 
 %clean
@@ -68,6 +71,9 @@ rm -rf %{_builddir}/%{name}
 
 
 %changelog
+* Fri Feb  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- add 9base sbase-box/ubase-box like wrapper script
+
 * Tue Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - replace /usr/local/plan9 everywhere
 - add /bin/rc symlink
