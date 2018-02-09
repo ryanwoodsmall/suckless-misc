@@ -1,0 +1,35 @@
+#!/bin/sh
+
+#
+# wrapper around 9base reflecting sbase-box/ubase-box/busybox/toybox
+#
+# XXX - shouldn't this be... rc???
+#
+
+if [ "${PLAN9}x" == "x" ] ; then
+  echo "PLAN9 environment variable not set" 1>&2
+  exit 1
+fi
+
+PLAN9BIN="${PLAN9}/bin"
+if [ ! -e "${PLAN9BIN}" ] ; then
+  echo "${PLAN9BIN} does not exit" 1>&2
+  exit 1
+fi
+
+if [ ${#} -lt 1 ] ; then
+  ls ${PLAN9BIN}/* \
+    | sed "s#${PLAN9BIN}/##g" \
+    | xargs echo
+  exit
+fi
+
+PLAN9CMD="${PLAN9BIN}/${1}"
+shift
+
+if [ ! -e "${PLAN9CMD}" ] ; then
+  echo "$(basename ${0}): $(basename ${PLAN9CMD}) not found"
+  exit 127
+fi
+
+${PLAN9CMD} "${@}"
