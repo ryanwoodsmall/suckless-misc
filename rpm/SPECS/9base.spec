@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	3%{?dist}
+Release:	4%{?dist}
 Summary:	suckless 9base
 Source0:	%{name}
 
@@ -53,8 +53,8 @@ make install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
 echo 'export PLAN9="%{inst_prefix}"' > %{buildroot}%{profiled}/zz_%{name}.sh
 echo 'export PATH="${PATH}:${PLAN9}/bin"' >> %{buildroot}%{profiled}/zz_%{name}.sh
-mkdir -p %{buildroot}/bin
-ln -s %{inst_prefix}/bin/rc %{buildroot}/bin/
+#mkdir -p %{buildroot}/bin
+#ln -s %{inst_prefix}/bin/rc %{buildroot}/bin/
 install -m 755 %SOURCE0 %{buildroot}%{inst_prefix}/bin
 ln -s %{inst_prefix}/bin/%{name} %{buildroot}%{inst_prefix}/bin/%{name}-box
 
@@ -67,12 +67,14 @@ rm -rf %{_builddir}/%{name}
 %files
 %{inst_prefix}/*
 %{_sysconfdir}/profile.d/*%{name}*.sh
-/bin/rc
+#/bin/rc
 
 
 %changelog
 * Fri Feb  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - add 9base sbase-box/ubase-box like wrapper script
+- remove /bin/rc symlink, can be handled with static editline rc
+- https://github.com/ryanwoodsmall/rc-misc
 
 * Tue Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - replace /usr/local/plan9 everywhere
