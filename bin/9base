@@ -18,9 +18,7 @@ if [ ! -e "${PLAN9BIN}" ] ; then
 fi
 
 if [ ${#} -lt 1 ] ; then
-  ls ${PLAN9BIN}/* \
-    | sed "s#${PLAN9BIN}/##g" \
-    | xargs echo
+  echo $(find "${PLAN9BIN}/" ! -type d | sort | sed "s#${PLAN9BIN}/##g")
   exit
 fi
 

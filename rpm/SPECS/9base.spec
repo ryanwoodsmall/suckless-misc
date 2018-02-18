@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	4%{?dist}
+Release:	5%{?dist}
 Summary:	suckless 9base
 Source0:	%{name}
 
@@ -71,6 +71,9 @@ rm -rf %{_builddir}/%{name}
 
 
 %changelog
+* Sat Feb 17 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for simpler 9base-box wrapper
+
 * Fri Feb  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - add 9base sbase-box/ubase-box like wrapper script
 - remove /bin/rc symlink, can be handled with static editline rc
