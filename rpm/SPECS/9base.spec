@@ -79,7 +79,7 @@ rm -rf %{_builddir}/%{name}
 - remove /bin/rc symlink, can be handled with static editline rc
 - https://github.com/ryanwoodsmall/rc-misc
 
-* Tue Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - replace /usr/local/plan9 everywhere
 - add /bin/rc symlink
 
