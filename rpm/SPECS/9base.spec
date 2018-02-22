@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	5%{?dist}
+Release:	6%{?dist}
 Summary:	suckless 9base
 Source0:	%{name}
 
@@ -14,7 +14,7 @@ Group:		System Environment/Shells
 License:	MIT
 URL:		https://tools.suckless.org/9base
 
-BuildRequires:	musl-static >= 1.1.18
+BuildRequires:	musl-static >= 1.1.19
 BuildRequires:	git
 
 %description
@@ -53,8 +53,6 @@ make install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
 echo 'export PLAN9="%{inst_prefix}"' > %{buildroot}%{profiled}/zz_%{name}.sh
 echo 'export PATH="${PATH}:${PLAN9}/bin"' >> %{buildroot}%{profiled}/zz_%{name}.sh
-#mkdir -p %{buildroot}/bin
-#ln -s %{inst_prefix}/bin/rc %{buildroot}/bin/
 install -m 755 %SOURCE0 %{buildroot}%{inst_prefix}/bin
 ln -s %{inst_prefix}/bin/%{name} %{buildroot}%{inst_prefix}/bin/%{name}-box
 
@@ -67,10 +65,12 @@ rm -rf %{_builddir}/%{name}
 %files
 %{inst_prefix}/*
 %{_sysconfdir}/profile.d/*%{name}*.sh
-#/bin/rc
 
 
 %changelog
+* Thu Feb 22 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for musl-libc 1.1.19
+
 * Sat Feb 17 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for simpler 9base-box wrapper
 
