@@ -5,12 +5,12 @@
 
 Name:		ubase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	1%{?dist}
-Summary:	suckless ubase
+Release:	2%{?dist}
+Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
-URL:		https://core.suckless.org/ubase
+URL:		https://core.suckless.org/%{name}
 
 BuildRequires:	musl-static >= 1.1.19
 BuildRequires:	git
@@ -37,12 +37,12 @@ echo "LDFLAGS = -s -static" >> config.mk
 
 %build
 cd %{_builddir}/%{name}
-make ubase-box
+make %{name}-box
 
 
 %install
 cd %{_builddir}/%{name}
-make ubase-box-install DESTDIR=%{buildroot}
+make %{name}-box-install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
 echo 'export PATH="${PATH}:%{inst_prefix}/bin"' > %{buildroot}%{profiled}/zz_%{name}.sh
 
@@ -58,6 +58,9 @@ rm -rf %{_builddir}/%{name}
 
 
 %changelog
+* Fri Jun 29 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for sbase/ubase spec sync
+
 * Thu Feb 22 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for musl-libc 1.1.19
 
