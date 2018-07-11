@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	6%{?dist}
+Release:	7%{?dist}
 Summary:	suckless 9base
 Source0:	%{name}
 
@@ -60,6 +60,7 @@ ln -s %{inst_prefix}/bin/%{name} %{buildroot}%{inst_prefix}/bin/%{name}-box
 %clean
 cd %{_builddir}
 rm -rf %{_builddir}/%{name}
+rm -rf %{buildroot}
 
 
 %files
@@ -68,6 +69,9 @@ rm -rf %{_builddir}/%{name}
 
 
 %changelog
+* Wed Jul 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for buildroot cleanup
+
 * Thu Feb 22 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for musl-libc 1.1.19
 

@@ -5,7 +5,7 @@
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	2%{?dist}
+Release:	3%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
@@ -50,6 +50,7 @@ echo 'export PATH="${PATH}:%{inst_prefix}/bin"' > %{buildroot}%{profiled}/zz_%{n
 %clean
 cd %{_builddir}
 rm -rf %{_builddir}/%{name}
+rm -rf %{buildroot}
 
 
 %files
@@ -58,6 +59,9 @@ rm -rf %{_builddir}/%{name}
 
 
 %changelog
+* Wed Jul 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for buildroot cleanup
+
 * Fri Jun 29 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for sbase/ubase spec sync
 
