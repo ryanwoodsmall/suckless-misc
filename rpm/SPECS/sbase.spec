@@ -5,14 +5,14 @@
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	3%{?dist}
+Release:	4%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.1.19
+BuildRequires:	musl-static >= 1.1.20
 BuildRequires:	git
 
 %description
@@ -59,6 +59,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Tue Sep 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for musl-libc 1.1.20
+
 * Wed Jul 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for buildroot cleanup
 
@@ -69,4 +72,4 @@ rm -rf %{buildroot}
 - release no. bump for musl-libc 1.1.19
 
 * Tue Jan  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
-- ugly spec for building suckless sbase
+- ugly rpm specs for building suckless *base
