@@ -1,0 +1,3074 @@
+diff --git a/Makefile b/Makefile
+index 65a8a40..c2ab536 100644
+--- a/Makefile
++++ b/Makefile
+@@ -27,6 +27,7 @@ SUBDIRS  = lib9\
+ 	grep\
+ 	hoc\
+ 	join\
++	lex\
+ 	listen1\
+ 	look\
+ 	ls\
+diff --git a/lex/Makefile b/lex/Makefile
+new file mode 100644
+index 0000000..7979187
+--- /dev/null
++++ b/lex/Makefile
+@@ -0,0 +1,21 @@
++# lex - lex unix port from plan9
++# Depends on ../lib9
++
++TARG      = lex
++
++OFILES    = header.o lmain.o sub1.o sub2.o y.tab.o
++
++YFILES    = parser.y
++
++HFILES    = ldefs.h
++
++MANFILES  = ${TARG}.1
++
++include ../yacc.mk
++
++pre-uninstall:
++	rm -f ${DESTDIR}${PREFIX}/lib/lex.ncform
++
++post-install:
++	@mkdir -p ${DESTDIR}${PREFIX}/lib
++	@cp ncform ${DESTDIR}${PREFIX}/lib/lex.ncform
+diff --git a/lex/header.c b/lex/header.c
+new file mode 100644
+index 0000000..8264f4c
+--- /dev/null
++++ b/lex/header.c
+@@ -0,0 +1,115 @@
++# include "ldefs.h"
++
++extern int nine;
++
++void
++phead1(void)
++{
++	Bprint(&fout,"typedef unsigned char Uchar;\n");
++	if (nine) {
++		Bprint(&fout,"# include <u.h>\n");
++		Bprint(&fout,"# include <libc.h>\n");
++	}
++	Bprint(&fout,"# include <stdio.h>\n");
++	Bprint(&fout, "# define U(x) x\n");
++	Bprint(&fout, "# define NLSTATE yyprevious=YYNEWLINE\n");
++	Bprint(&fout,"# define BEGIN yybgin = yysvec + 1 +\n");
++	Bprint(&fout,"# define INITIAL 0\n");
++	Bprint(&fout,"# define YYLERR yysvec\n");
++	Bprint(&fout,"# define YYSTATE (yyestate-yysvec-1)\n");
++	Bprint(&fout,"# define YYOPTIM 1\n");
++# ifdef DEBUG
++	Bprint(&fout,"# define LEXDEBUG 1\n");
++# endif
++	Bprint(&fout,"# define YYLMAX 200\n");
++	Bprint(&fout,
++"# define unput(c) {yytchar= (c);if(yytchar=='\\n')yylineno--;*yysptr++=yytchar;}\n");
++	Bprint(&fout,"# define yymore() (yymorfg=1)\n");
++	Bprint(&fout,"# define ECHO fprintf(yyout, \"%%s\",yytext)\n");
++	Bprint(&fout,"# define REJECT { nstr = yyreject(); goto yyfussy;}\n");
++	Bprint(&fout,"int yyleng; extern char yytext[];\n");
++	Bprint(&fout,"int yymorfg;\n");
++	Bprint(&fout,"extern Uchar *yysptr, yysbuf[];\n");
++	Bprint(&fout,"int yytchar;\n");
++/*	Bprint(&fout,"FILE *yyin = stdin, *yyout = stdout;\n"); */
++	Bprint(&fout,"FILE *yyin, *yyout;\n");
++	Bprint(&fout,"extern int yylineno;\n");
++	Bprint(&fout,"struct yysvf { \n");
++	Bprint(&fout,"\tstruct yywork *yystoff;\n");
++	Bprint(&fout,"\tstruct yysvf *yyother;\n");
++	Bprint(&fout,"\tint *yystops;};\n");
++	Bprint(&fout,"struct yysvf *yyestate;\n");
++	Bprint(&fout,"extern struct yysvf yysvec[], *yybgin;\n");
++	Bprint(&fout,"int yylook(void), yywrap(void), yyback(int *, int);\n");
++	if(nine) {
++		Bprint(&fout,
++				"int infd, outfd;\n"
++				"\n"
++				"void\n"
++				"output(char c)\n"
++				"{\n"
++				"	int rv;\n"
++				"	if ((rv = write(outfd, &c, 1)) < 0)\n"
++				"		sysfatal(\"output: %%r\");\n"
++				"	if (rv == 0)\n"
++				"		sysfatal(\"output: EOF?\");\n"
++				"}\n"
++				"\n"
++				"int\n"
++				"input(void)\n"
++				"{\n"
++				"	if(yysptr > yysbuf)\n"
++				"		yytchar = U(*--yysptr);\n"
++				"	else {\n"
++				"		int rv;\n"
++				"		if ((rv = read(infd, &yytchar, 1)) < 0)\n"
++				"			sysfatal(\"input: %%r\");\n"
++				"		if (rv == 0)\n"
++				"			return 0;\n"
++				"	}\n"
++				"	if (yytchar == '\\n')\n"
++				"		yylineno++;\n"
++				"	return yytchar;\n"
++				"}\n");
++	}
++	else {
++		Bprint(&fout,"# define output(c) putc(c,yyout)\n");
++		Bprint(&fout, "%s%d%s\n",
++ 		 "# define input() (((yytchar=yysptr>yysbuf?U(*--yysptr):getc(yyin))==",
++		'\n',
++ 		"?(yylineno++,yytchar):yytchar)==EOF?0:yytchar)");
++	}
++}
++
++void
++phead2(void)
++{
++	Bprint(&fout,"while((nstr = yylook()) >= 0){\n");
++	Bprint(&fout,"goto yyfussy; yyfussy: switch(nstr){\n");
++	Bprint(&fout,"case 0:\n");
++	Bprint(&fout,"if(yywrap()) return(0); break;\n");
++}
++
++void
++ptail(void)
++{
++	if(!pflag){
++		Bprint(&fout,"case -1:\nbreak;\n");		/* for reject */
++		Bprint(&fout,"default:\n");
++		Bprint(&fout,"fprintf(yyout,\"bad switch yylook %%d\",nstr);\n");
++		Bprint(&fout,"}} return(0); }\n");
++		Bprint(&fout,"/* end of yylex */\n");
++	}
++	pflag = 1;
++}
++
++void
++statistics(void)
++{
++	fprint(errorf,"%d/%d nodes(%%e), %d/%d positions(%%p), %d/%d (%%n), %ld transitions\n",
++		tptr, treesize, (int)(nxtpos-positions), maxpos, stnum+1, nstates, rcount);
++	fprint(errorf, ", %d/%d packed char classes(%%k)", (int)(pcptr-pchar), pchlen);
++	fprint(errorf,", %d/%d packed transitions(%%a)",nptr, ntrans);
++	fprint(errorf, ", %d/%d output slots(%%o)", yytop, outsize);
++	fprint(errorf,"\n");
++}
+diff --git a/lex/ldefs.h b/lex/ldefs.h
+new file mode 100644
+index 0000000..d9b03fd
+--- /dev/null
++++ b/lex/ldefs.h
+@@ -0,0 +1,182 @@
++# include <u.h>
++# include <libc.h>
++# include <ctype.h>
++# include <bio.h>
++# define PP 1
++
++#ifdef NOTDEF
++# define CWIDTH 8
++# define CMASK 0377
++#endif
++# define NCH 256
++
++
++# define TOKENSIZE 1000
++# define DEFSIZE 40
++# define DEFCHAR 1000
++# define STARTCHAR 100
++# define STARTSIZE 256
++# define CCLSIZE 1000
++
++# define TREESIZE 1000
++# define NSTATES 500
++# define MAXPOS 2500
++# define NTRANS 2000
++# define NOUTPUT 5000
++
++# define NACTIONS 100
++# define ALITTLEEXTRA 30
++
++# define RCCL NCH+90
++# define RNCCL NCH+91
++# define RSTR NCH+92
++# define RSCON NCH+93
++# define RNEWE NCH+94
++# define FINAL NCH+95
++# define RNULLS NCH+96
++# define RCAT NCH+97
++# define STAR NCH+98
++# define PLUS NCH+99
++# define QUEST NCH+100
++# define DIV NCH+101
++# define BAR NCH+102
++# define CARAT NCH+103
++# define S1FINAL NCH+104
++# define S2FINAL NCH+105
++
++# define DEFSECTION 1
++# define RULESECTION 2
++# define ENDSECTION 5
++# define TRUE 1
++# define FALSE 0
++
++# define PC 1
++# define PS 1
++
++# ifdef DEBUG
++# define LINESIZE 110
++extern int yydebug;
++extern int debug;		/* 1 = on */
++extern int charc;
++# endif
++
++# ifdef DEBUG
++extern int	freturn(int);
++# else
++# define freturn(s) s
++# endif
++
++extern int sargc;
++extern char **sargv;
++extern uchar buf[520];
++extern int yyline;		/* line number of file */
++extern int sect;
++extern int eof;
++extern int lgatflg;
++extern int divflg;
++extern int funcflag;
++extern int pflag;
++extern int casecount;
++extern int chset;	/* 1 = char set modified */
++extern Biobuf *fin, fout, *fother;
++extern int foutopen;
++extern int errorf;
++extern int fptr;
++extern char *cname;
++extern int prev;	/* previous input character */
++extern int pres;	/* present input character */
++extern int peek;	/* next input character */
++extern int *name;
++extern int *left;
++extern uintptr *right;
++extern int *parent;
++extern uchar **ptr;
++extern uchar *nullstr;
++extern int tptr;
++extern uchar pushc[TOKENSIZE];
++extern uchar *pushptr;
++extern uchar slist[STARTSIZE];
++extern uchar *slptr;
++extern uchar **def, **subs, *dchar;
++extern uchar **sname, *stchar;
++extern uchar *ccl;
++extern uchar *ccptr;
++extern uchar *dp, *sp;
++extern int dptr, sptr;
++extern uchar *bptr;		/* store input position */
++extern uchar *tmpstat;
++extern int count;
++extern int **foll;
++extern int *nxtpos;
++extern int *positions;
++extern int *gotof;
++extern int *nexts;
++extern uchar *nchar;
++extern int **state;
++extern int *sfall;		/* fallback state num */
++extern uchar *cpackflg;		/* true if state has been character packed */
++extern int *atable, aptr;
++extern int nptr;
++extern uchar symbol[NCH];
++extern uchar cindex[NCH];
++extern int xstate;
++extern int stnum;
++extern int ccount;
++extern uchar match[NCH];
++extern uchar extra[NACTIONS];
++extern uchar *pcptr, *pchar;
++extern int pchlen;
++extern int nstates, maxpos;
++extern int yytop;
++extern int report;
++extern int ntrans, treesize, outsize;
++extern long rcount;
++extern int *verify, *advance, *stoff;
++extern int scon;
++extern uchar *psave;
++
++extern void	acompute(int);
++extern void	add(int **, int);
++extern void	allprint(int);
++extern void	cclinter(int);
++extern void	cgoto(void);
++extern void	cfoll(int);
++extern int	cpyact(void);
++extern int	dupl(int);
++extern void	error(char *,...);
++extern void	first(int);
++extern void	follow(int);
++extern int	gch(void);
++extern uchar	*getl(uchar *);
++extern void	layout(void);
++extern void	lgate(void);
++extern int	lookup(uchar *, uchar **);
++extern int	member(int, uchar *);
++extern void	mkmatch(void);
++extern int	mnp(int, void*);
++extern int	mn0(int);
++extern int	mn1(int, int);
++extern int	mn2(int, int, uintptr);
++extern void	munputc(int);
++extern void	munputs(uchar *);
++extern void	*myalloc(int, int);
++extern void	nextstate(int, int);
++extern int	notin(int);
++extern void	packtrans(int, uchar *, int *, int, int);
++extern void	padd(int **, int);
++extern void	pccl(void);
++extern void	pfoll(void);
++extern void	phead1(void);
++extern void	phead2(void);
++extern void	pstate(int);
++extern void	ptail(void);
++extern void	sect1dump(void);
++extern void	sect2dump(void);
++extern void	statistics(void);
++extern void	stprt(int);
++extern void	strpt(uchar *);
++extern void	treedump(void);
++extern int	usescape(int);
++extern void	warning(char *,...);
++extern int	yyparse(void);
++extern void	yyerror(char *);
+diff --git a/lex/lex.1 b/lex/lex.1
+new file mode 100644
+index 0000000..6955e79
+--- /dev/null
++++ b/lex/lex.1
+@@ -0,0 +1,81 @@
++.TH LEX 1
++.SH NAME
++lex \- generator of lexical analysis programs
++.SH SYNOPSIS
++.B lex
++[
++.B -tvn9
++]
++[
++.I file ...
++]
++.SH DESCRIPTION
++.I Lex
++generates programs to be used in simple lexical analysis of text.
++The input
++.I files
++(standard input default)
++contain regular expressions
++to be searched for and actions written in C to be executed when
++expressions are found.
++.PP
++A C source program,
++.B lex.yy.c
++is generated.
++This program, when run, copies unrecognized portions of
++the input to the output,
++and executes the associated
++C action for each regular expression that is recognized.
++.PP
++The options have the following meanings.
++.TP
++.B -t
++Place the result on the standard output instead of in file
++.BR lex.yy.c .
++.TP
++.B -v
++Print a one-line summary of statistics of the generated analyzer.
++.TP
++.B -n
++Opposite of
++.BR -v ;
++.B -n
++is default.
++.TP
++.B -9
++Adds code to be able to compile through the native C compilers.
++.SH EXAMPLES
++This program converts upper case to lower,
++removes blanks at the end of lines,
++and replaces multiple blanks by single blanks.
++.PP
++.EX
++%%
++[A-Z]	putchar(yytext[0]+\'a\'-\'A\');
++[ ]+$
++[ ]+	putchar(\' \');
++.EE
++.SH FILES
++.TF /sys/lib/lex/ncform
++.TP
++.B lex.yy.c
++output
++.TP
++.B /sys/lib/lex/ncform
++template
++.SH "SEE ALSO"
++.IR yacc (1), 
++.IR sed (1)
++.br
++M. E. Lesk and E. Schmidt,
++`LEX\(emLexical Analyzer Generator', 
++.I
++Unix Research System Programmer's Manual,
++Tenth Edition, Volume 2.
++.SH SOURCE
++.B \*9/src/cmd/lex
++.SH BUGS
++Cannot handle
++.SM UTF.
++.PP
++The asteroid to kill this dinosaur is still in orbit.
+diff --git a/lex/lmain.c b/lex/lmain.c
+new file mode 100644
+index 0000000..7372d8c
+--- /dev/null
++++ b/lex/lmain.c
+@@ -0,0 +1,296 @@
++/* lex [-[dynvt]] [file] ... [file] */
++
++/* Copyright 1976, Bell Telephone Laboratories, Inc.,
++   written by Eric Schmidt, August 27, 1976   */
++
++# include "ldefs.h"
++Biobuf	fout;
++int	foutopen;
++int	errorf = 1;
++int	sect = DEFSECTION;
++int	prev = '\n';	/* previous input character */
++int	pres = '\n';	/* present input character */
++int	peek = '\n';	/* next input character */
++uchar	*pushptr = pushc;
++uchar	*slptr = slist;
++
++char	*cname;
++
++int nine;
++int ccount = 1;
++int casecount = 1;
++int aptr = 1;
++int nstates = NSTATES, maxpos = MAXPOS;
++int treesize = TREESIZE, ntrans = NTRANS;
++int yytop;
++int outsize = NOUTPUT;
++int sptr = 1;
++int report = 2;
++int debug;		/* 1 = on */
++int charc;
++int sargc;
++char **sargv;
++uchar buf[520];
++int yyline;		/* line number of file */
++int eof;
++int lgatflg;
++int divflg;
++int funcflag;
++int pflag;
++int chset;	/* 1 = char set modified */
++Biobuf *fin, *fother;
++int fptr;
++int *name;
++int *left;
++uintptr *right;
++int *parent;
++uchar *nullstr;
++uchar **ptr;
++int tptr;
++uchar pushc[TOKENSIZE];
++uchar slist[STARTSIZE];
++uchar **def, **subs, *dchar;
++uchar **sname, *stchar;
++uchar *ccl;
++uchar *ccptr;
++uchar *dp, *sp;
++int dptr;
++uchar *bptr;		/* store input position */
++uchar *tmpstat;
++int count;
++int **foll;
++int *nxtpos;
++int *positions;
++int *gotof;
++int *nexts;
++uchar *nchar;
++int **state;
++int *sfall;		/* fallback state num */
++uchar *cpackflg;		/* true if state has been character packed */
++int *atable;
++int nptr;
++uchar symbol[NCH];
++uchar cindex[NCH];
++int xstate;
++int stnum;
++uchar match[NCH];
++uchar extra[NACTIONS];
++uchar *pchar, *pcptr;
++int pchlen = TOKENSIZE;
++ long rcount;
++int *verify, *advance, *stoff;
++int scon;
++uchar *psave;
++
++static void	free1core(void);
++static void	free2core(void);
++#ifdef DEBUG
++static void	free3core(void);
++#endif
++static void	get1core(void);
++static void	get2core(void);
++static void	get3core(void);
++
++void
++main(int argc, char **argv)
++{
++	int i;
++
++	cname = unsharp("#9/lib/lex.ncform");
++
++	ARGBEGIN {
++# ifdef DEBUG
++		case 'd': debug++; break;
++		case 'y': yydebug = TRUE; break;
++# endif
++		case 't': case 'T':
++			Binit(&fout, 1, OWRITE);
++			errorf= 2;
++			foutopen = 1;
++			break;
++		case 'v': case 'V':
++			report = 1;
++			break;
++		case 'n': case 'N':
++			report = 0;
++			break;
++		case '9':
++			nine = 1;
++			break;
++		default:
++			warning("Unknown option %c", ARGC());
++	} ARGEND
++	sargc = argc;
++	sargv = argv;
++	if (argc > 0){
++		fin = Bopen(argv[fptr++], OREAD);
++		if(fin == 0)
++			error ("Can't read input file %s",argv[0]);
++		sargc--;
++		sargv++;
++	}
++	else {
++		fin = myalloc(sizeof(Biobuf), 1);
++		if(fin == 0)
++			exits("core");
++		Binit(fin, 0, OREAD);
++	}
++	if(Bgetc(fin) == Beof)		/* no input */
++		exits(0);
++	Bseek(fin, 0, 0);
++	gch();
++		/* may be gotten: def, subs, sname, stchar, ccl, dchar */
++	get1core();
++		/* may be gotten: name, left, right, nullstr, parent */
++	strcpy((char*)sp, "INITIAL");
++	sname[0] = sp;
++	sp += strlen("INITIAL") + 1;
++	sname[1] = 0;
++	if(yyparse()) exits("error");	/* error return code */
++		/* may be disposed of: def, subs, dchar */
++	free1core();
++		/* may be gotten: tmpstat, foll, positions, gotof, nexts, nchar, state, atable, sfall, cpackflg */
++	get2core();
++	ptail();
++	mkmatch();
++# ifdef DEBUG
++	if(debug) pccl();
++# endif
++	sect  = ENDSECTION;
++	if(tptr>0)cfoll(tptr-1);
++# ifdef DEBUG
++	if(debug)pfoll();
++# endif
++	cgoto();
++# ifdef DEBUG
++	if(debug){
++		print("Print %d states:\n",stnum+1);
++		for(i=0;i<=stnum;i++)stprt(i);
++		}
++# endif
++		/* may be disposed of: positions, tmpstat, foll, state, name, left, right, parent, ccl, stchar, sname */
++		/* may be gotten: verify, advance, stoff */
++	free2core();
++	get3core();
++	layout();
++		/* may be disposed of: verify, advance, stoff, nexts, nchar,
++			gotof, atable, ccpackflg, sfall */
++# ifdef DEBUG
++	free3core();
++# endif
++	fother = Bopen(cname,OREAD);
++	if(fother == 0)
++		error("Lex driver missing, file %s",cname);
++	while ( (i=Bgetc(fother)) != Beof)
++		Bputc(&fout, i);
++
++	Bterm(fother);
++	Bterm(&fout);
++	if(
++# ifdef DEBUG
++		debug   ||
++# endif
++			report == 1)statistics();
++	if(fin)
++		Bterm(fin);
++	exits(0);	/* success return code */
++}
++
++static void
++get1core(void)
++{
++	ccptr =	ccl = myalloc(CCLSIZE,sizeof(*ccl));
++	pcptr = pchar = myalloc(pchlen, sizeof(*pchar));
++	def = myalloc(DEFSIZE,sizeof(*def));
++	subs = myalloc(DEFSIZE,sizeof(*subs));
++	dp = dchar = myalloc(DEFCHAR,sizeof(*dchar));
++	sname = myalloc(STARTSIZE,sizeof(*sname));
++	sp = stchar = myalloc(STARTCHAR,sizeof(*stchar));
++	if(ccl == 0 || def == 0 || subs == 0 || dchar == 0 || sname == 0 || stchar == 0)
++		error("Too little core to begin");
++}
++
++static void
++free1core(void)
++{
++	free(def);
++	free(subs);
++	free(dchar);
++}
++
++static void
++get2core(void)
++{
++	int i;
++
++	gotof = myalloc(nstates,sizeof(*gotof));
++	nexts = myalloc(ntrans,sizeof(*nexts));
++	nchar = myalloc(ntrans,sizeof(*nchar));
++	state = myalloc(nstates,sizeof(*state));
++	atable = myalloc(nstates,sizeof(*atable));
++	sfall = myalloc(nstates,sizeof(*sfall));
++	cpackflg = myalloc(nstates,sizeof(*cpackflg));
++	tmpstat = myalloc(tptr+1,sizeof(*tmpstat));
++	foll = myalloc(tptr+1,sizeof(*foll));
++	nxtpos = positions = myalloc(maxpos,sizeof(*positions));
++	if(tmpstat == 0 || foll == 0 || positions == 0 ||
++		gotof == 0 || nexts == 0 || nchar == 0 || state == 0 || atable == 0 || sfall == 0 || cpackflg == 0 )
++		error("Too little core for state generation");
++	for(i=0;i<=tptr;i++)foll[i] = 0;
++}
++
++static void
++free2core(void)
++{
++	free(positions);
++	free(tmpstat);
++	free(foll);
++	free(name);
++	free(left);
++	free(right);
++	free(parent);
++	free(nullstr);
++	free(state);
++	free(sname);
++	free(stchar);
++	free(ccl);
++}
++
++static void
++get3core(void)
++{
++	verify = myalloc(outsize,sizeof(*verify));
++	advance = myalloc(outsize,sizeof(*advance));
++	stoff = myalloc(stnum+2,sizeof(*stoff));
++	if(verify == 0 || advance == 0 || stoff == 0)
++		error("Too little core for final packing");
++}
++# ifdef DEBUG
++static void
++free3core(void){
++	free(advance);
++	free(verify);
++	free(stoff);
++	free(gotof);
++	free(nexts);
++	free(nchar);
++	free(atable);
++	free(sfall);
++	free(cpackflg);
++}
++# endif
++void *
++myalloc(int a, int b)
++{
++	void *i;
++	i = calloc(a, b);
++	if(i==0)
++		warning("OOPS - calloc returns a 0");
++	return(i);
++}
++
++void
++yyerror(char *s)
++{
++	fprint(2, "line %d: %s\n", yyline, s);
++}
+diff --git a/lex/ncform b/lex/ncform
+new file mode 100644
+index 0000000..64740ae
+--- /dev/null
++++ b/lex/ncform
+@@ -0,0 +1,191 @@
++#pragma lib	"libl.a"
++int yylineno =1;
++# define YYU(x) x
++char yytext[YYLMAX];
++struct yysvf *yylstate [YYLMAX], **yylsp, **yyolsp;
++Uchar yysbuf[YYLMAX];
++Uchar *yysptr = yysbuf;
++int *yyfnd;
++extern struct yysvf *yyestate;
++int yyprevious = YYNEWLINE;
++# ifdef LEXDEBUG
++extern void allprint(char);
++# endif
++int
++yylook(void){
++	struct yysvf *yystate, **lsp;
++	struct yywork *yyt;
++	struct yysvf *yyz;
++	int yych;
++	struct yywork *yyr;
++# ifdef LEXDEBUG
++	int debug;
++# endif
++	Uchar *yylastch;
++	/* start off machines */
++# ifdef LEXDEBUG
++	debug = 0;
++# endif
++	if (!yymorfg)
++		yylastch = (Uchar*)yytext;
++	else {
++		yymorfg=0;
++		yylastch = (Uchar*)yytext+yyleng;
++		}
++	for(;;){
++		lsp = yylstate;
++		yyestate = yystate = yybgin;
++		if (yyprevious==YYNEWLINE) yystate++;
++		for (;;){
++# ifdef LEXDEBUG
++			if(debug)fprintf(yyout,"state %d\n",yystate-yysvec-1);
++# endif
++			yyt = yystate->yystoff;
++			if(yyt == yycrank){		/* may not be any transitions */
++				yyz = yystate->yyother;
++				if(yyz == 0)break;
++				if(yyz->yystoff == yycrank)break;
++				}
++			*yylastch++ = yych = input();
++		tryagain:
++# ifdef LEXDEBUG
++			if(debug){
++				fprintf(yyout,"char ");
++				allprint(yych);
++				putchar('\n');
++				}
++# endif
++			yyr = yyt;
++			if ( (int)yyt > (int)yycrank){
++				yyt = yyr + yych;
++				if (yyt <= yytop && yyt->verify+yysvec == yystate){
++					if(yyt->advance+yysvec == YYLERR)	/* error transitions */
++						{unput(*--yylastch);break;}
++					*lsp++ = yystate = yyt->advance+yysvec;
++					goto contin;
++					}
++				}
++# ifdef YYOPTIM
++			else if((int)yyt < (int)yycrank) {		/* r < yycrank */
++				yyt = yyr = yycrank+(yycrank-yyt);
++# ifdef LEXDEBUG
++				if(debug)fprintf(yyout,"compressed state\n");
++# endif
++				yyt = yyt + yych;
++				if(yyt <= yytop && yyt->verify+yysvec == yystate){
++					if(yyt->advance+yysvec == YYLERR)	/* error transitions */
++						{unput(*--yylastch);break;}
++					*lsp++ = yystate = yyt->advance+yysvec;
++					goto contin;
++					}
++				yyt = yyr + YYU(yymatch[yych]);
++# ifdef LEXDEBUG
++				if(debug){
++					fprintf(yyout,"try fall back character ");
++					allprint(YYU(yymatch[yych]));
++					putchar('\n');
++					}
++# endif
++				if(yyt <= yytop && yyt->verify+yysvec == yystate){
++					if(yyt->advance+yysvec == YYLERR)	/* error transition */
++						{unput(*--yylastch);break;}
++					*lsp++ = yystate = yyt->advance+yysvec;
++					goto contin;
++					}
++				}
++			if ((yystate = yystate->yyother) && (yyt= yystate->yystoff) != yycrank){
++# ifdef LEXDEBUG
++				if(debug)fprintf(yyout,"fall back to state %d\n",yystate-yysvec-1);
++# endif
++				goto tryagain;
++				}
++# endif
++			else
++				{unput(*--yylastch);break;}
++		contin:
++# ifdef LEXDEBUG
++			if(debug){
++				fprintf(yyout,"state %d char ",yystate-yysvec-1);
++				allprint(yych);
++				putchar('\n');
++				}
++# endif
++			;
++			}
++# ifdef LEXDEBUG
++		if(debug){
++			fprintf(yyout,"stopped at %d with ",*(lsp-1)-yysvec-1);
++			allprint(yych);
++			putchar('\n');
++			}
++# endif
++		while (lsp-- > yylstate){
++			*yylastch-- = 0;
++			if (*lsp != 0 && (yyfnd= (*lsp)->yystops) && *yyfnd > 0){
++				yyolsp = lsp;
++				if(yyextra[*yyfnd]){		/* must backup */
++					while(yyback((*lsp)->yystops,-*yyfnd) != 1 && lsp > yylstate){
++						lsp--;
++						unput(*yylastch--);
++						}
++					}
++				yyprevious = YYU(*yylastch);
++				yylsp = lsp;
++				yyleng = yylastch-(Uchar*)yytext+1;
++				yytext[yyleng] = 0;
++# ifdef LEXDEBUG
++				if(debug){
++					fprintf(yyout,"\nmatch '%s'", yytext);
++					fprintf(yyout," action %d\n",*yyfnd);
++					}
++# endif
++				return(*yyfnd++);
++				}
++			unput(*yylastch);
++			}
++		if (yytext[0] == 0  /* && feof(yyin) */)
++			{
++			yysptr=yysbuf;
++			return(0);
++			}
++		yyprevious = input();
++		yytext[0] = yyprevious;
++		if (yyprevious>0)
++			output(yyprevious);
++		yylastch = (Uchar*)yytext;
++# ifdef LEXDEBUG
++		if(debug)putchar('\n');
++# endif
++		}
++	/* not reached */
++	}
++int
++yyback(int *p, int m)
++{
++if (p==0) return(0);
++while (*p)
++	{
++	if (*p++ == m)
++		return(1);
++	}
++return(0);
++}
++	/* the following are only used in the lex library */
++int
++yyinput(void){
++	if(yyin == ((void*)0))
++		yyin = stdin;
++	return(input());
++}
++void
++yyoutput(int c)
++{
++	if(yyout == ((void*)0))
++		yyout = stdin;
++	output(c);
++}
++void
++yyunput(int c)
++{
++	unput(c);
++}
+diff --git a/lex/parser.y b/lex/parser.y
+new file mode 100644
+index 0000000..964a60f
+--- /dev/null
++++ b/lex/parser.y
+@@ -0,0 +1,652 @@
++%token CHAR CCL NCCL STR DELIM SCON ITER NEWE NULLS
++%left SCON '/' NEWE
++%left '|'
++%left '$' '^'
++%left CHAR CCL NCCL '(' '.' STR NULLS
++%left ITER
++%left CAT
++%left '*' '+' '?'
++
++%{
++# include "ldefs.h"
++#define YYSTYPE union _yystype_
++union _yystype_
++{
++	int	i;
++	uchar	*cp;
++};
++%}
++%%
++%{
++int i;
++int j,k;
++int g;
++uchar *p;
++%}
++acc	:	lexinput
++	={	
++# ifdef DEBUG
++		if(debug) sect2dump();
++# endif
++	}
++	;
++lexinput:	defns delim prods end
++	|	defns delim end
++	={
++		if(!funcflag)phead2();
++		funcflag = TRUE;
++	}
++	| error
++	={
++# ifdef DEBUG
++		if(debug) {
++			sect1dump();
++			sect2dump();
++			}
++# endif
++		}
++	;
++end:		delim | ;
++defns:	defns STR STR
++	={	strcpy((char*)dp,(char*)$2.cp);
++		def[dptr] = dp;
++		dp += strlen((char*)$2.cp) + 1;
++		strcpy((char*)dp,(char*)$3.cp);
++		subs[dptr++] = dp;
++		if(dptr >= DEFSIZE)
++			error("Too many definitions");
++		dp += strlen((char*)$3.cp) + 1;
++		if(dp >= dchar+DEFCHAR)
++			error("Definitions too long");
++		subs[dptr]=def[dptr]=0;	/* for lookup - require ending null */
++	}
++	|
++	;
++delim:	DELIM
++	={
++# ifdef DEBUG
++		if(sect == DEFSECTION && debug) sect1dump();
++# endif
++		sect++;
++		}
++	;
++prods:	prods pr
++	={	$$.i = mn2(RNEWE,$1.i,$2.i);
++		}
++	|	pr
++	={	$$.i = $1.i;}
++	;
++pr:	r NEWE
++	={
++		if(divflg == TRUE)
++			i = mn1(S1FINAL,casecount);
++		else i = mn1(FINAL,casecount);
++		$$.i = mn2(RCAT,$1.i,i);
++		divflg = FALSE;
++		casecount++;
++		}
++	| error NEWE
++	={
++# ifdef DEBUG
++		if(debug) sect2dump();
++# endif
++		}
++r:	CHAR
++	={	$$.i = mn0($1.i); }
++	| STR
++	={
++		p = $1.cp;
++		i = mn0(*p++);
++		while(*p)
++			i = mn2(RSTR,i,*p++);
++		$$.i = i;
++		}
++	| '.'
++	={	symbol['\n'] = 0;
++		if(psave == FALSE){
++			p = ccptr;
++			psave = ccptr;
++			for(i=1;i<'\n';i++){
++				symbol[i] = 1;
++				*ccptr++ = i;
++				}
++			for(i='\n'+1;i<NCH;i++){
++				symbol[i] = 1;
++				*ccptr++ = i;
++				}
++			*ccptr++ = 0;
++			if(ccptr > ccl+CCLSIZE)
++				error("Too many large character classes");
++			}
++		else
++			p = psave;
++		$$.i = mnp(RCCL,p);
++		cclinter(1);
++		}
++	| CCL
++	={	$$.i = mnp(RCCL,$1.cp); }
++	| NCCL
++	={	$$.i = mnp(RNCCL,$1.cp); }
++	| r '*'
++	={	$$.i = mn1(STAR,$1.i); }
++	| r '+'
++	={	$$.i = mn1(PLUS,$1.i); }
++	| r '?'
++	={	$$.i = mn1(QUEST,$1.i); }
++	| r '|' r
++	={	$$.i = mn2(BAR,$1.i,$3.i); }
++	| r r %prec CAT
++	={	$$.i = mn2(RCAT,$1.i,$2.i); }
++	| r '/' r
++	={	if(!divflg){
++			j = mn1(S2FINAL,-casecount);
++			i = mn2(RCAT,$1.i,j);
++			$$.i = mn2(DIV,i,$3.i);
++			}
++		else {
++			$$.i = mn2(RCAT,$1.i,$3.i);
++			warning("Extra slash removed");
++			}
++		divflg = TRUE;
++		}
++	| r ITER ',' ITER '}'
++	={	if($2.i > $4.i){
++			i = $2.i;
++			$2.i = $4.i;
++			$4.i = i;
++			}
++		if($4.i <= 0)
++			warning("Iteration range must be positive");
++		else {
++			j = $1.i;
++			for(k = 2; k<=$2.i;k++)
++				j = mn2(RCAT,j,dupl($1.i));
++			for(i = $2.i+1; i<=$4.i; i++){
++				g = dupl($1.i);
++				for(k=2;k<=i;k++)
++					g = mn2(RCAT,g,dupl($1.i));
++				j = mn2(BAR,j,g);
++				}
++			$$.i = j;
++			}
++	}
++	| r ITER '}'
++	={
++		if($2.i < 0)warning("Can't have negative iteration");
++		else if($2.i == 0) $$.i = mn0(RNULLS);
++		else {
++			j = $1.i;
++			for(k=2;k<=$2.i;k++)
++				j = mn2(RCAT,j,dupl($1.i));
++			$$.i = j;
++			}
++		}
++	| r ITER ',' '}'
++	={
++				/* from n to infinity */
++		if($2.i < 0)warning("Can't have negative iteration");
++		else if($2.i == 0) $$.i = mn1(STAR,$1.i);
++		else if($2.i == 1)$$.i = mn1(PLUS,$1.i);
++		else {		/* >= 2 iterations minimum */
++			j = $1.i;
++			for(k=2;k<$2.i;k++)
++				j = mn2(RCAT,j,dupl($1.i));
++			k = mn1(PLUS,dupl($1.i));
++			$$.i = mn2(RCAT,j,k);
++			}
++		}
++	| SCON r
++	={	$$.i = mn2(RSCON,$2.i,(uintptr)$1.cp); }
++	| '^' r
++	={	$$.i = mn1(CARAT,$2.i); }
++	| r '$'
++	={	i = mn0('\n');
++		if(!divflg){
++			j = mn1(S2FINAL,-casecount);
++			k = mn2(RCAT,$1.i,j);
++			$$.i = mn2(DIV,k,i);
++			}
++		else $$.i = mn2(RCAT,$1.i,i);
++		divflg = TRUE;
++		}
++	| '(' r ')'
++	={	$$.i = $2.i; }
++	|	NULLS
++	={	$$.i = mn0(RNULLS); }
++	;
++%%
++int
++yylex(void)
++{
++	uchar *p;
++	int c, i;
++	uchar  *t, *xp;
++	int n, j, k, x;
++	static int sectbegin;
++	static uchar token[TOKENSIZE];
++	static int iter;
++
++# ifdef DEBUG
++	yylval.i = 0;
++# endif
++
++	if(sect == DEFSECTION) {		/* definitions section */
++		while(!eof) {
++			if(prev == '\n'){		/* next char is at beginning of line */
++				getl(p=buf);
++				switch(*p){
++				case '%':
++					switch(*(p+1)){
++					case '%':
++						lgate();
++						Bprint(&fout,"#define YYNEWLINE %d\n",'\n');
++						Bprint(&fout,"int\nyylex(void){\nint nstr; extern int yyprevious;\nif(yyprevious){}\n");
++						sectbegin = TRUE;
++						i = treesize*(sizeof(*name)+sizeof(*left)+
++							sizeof(*right)+sizeof(*nullstr)+sizeof(*parent))+ALITTLEEXTRA;
++						p = myalloc(i,1);
++						if(p == 0)
++							error("Too little core for parse tree");
++						free(p);
++						name = myalloc(treesize,sizeof(*name));
++						left = myalloc(treesize,sizeof(*left));
++						right = myalloc(treesize,sizeof(*right));
++						nullstr = myalloc(treesize,sizeof(*nullstr));
++						parent = myalloc(treesize,sizeof(*parent));
++						ptr = myalloc(treesize,sizeof(*ptr));
++						if(name == 0 || left == 0 || right == 0 || parent == 0 || nullstr == 0 || ptr == 0)
++							error("Too little core for parse tree");
++						return(freturn(DELIM));
++					case 'p': case 'P':	/* has overridden number of positions */
++						while(*p && !isdigit(*p))p++;
++						maxpos = atol((char*)p);
++# ifdef DEBUG
++						if (debug) print("positions (%%p) now %d\n",maxpos);
++# endif
++						if(report == 2)report = 1;
++						continue;
++					case 'n': case 'N':	/* has overridden number of states */
++						while(*p && !isdigit(*p))p++;
++						nstates = atol((char*)p);
++# ifdef DEBUG
++						if(debug)print( " no. states (%%n) now %d\n",nstates);
++# endif
++						if(report == 2)report = 1;
++						continue;
++					case 'e': case 'E':		/* has overridden number of tree nodes */
++						while(*p && !isdigit(*p))p++;
++						treesize = atol((char*)p);
++# ifdef DEBUG
++						if (debug) print("treesize (%%e) now %d\n",treesize);
++# endif
++						if(report == 2)report = 1;
++						continue;
++					case 'o': case 'O':
++						while (*p && !isdigit(*p))p++;
++						outsize = atol((char*)p);
++						if (report ==2) report=1;
++						continue;
++					case 'a': case 'A':		/* has overridden number of transitions */
++						while(*p && !isdigit(*p))p++;
++						if(report == 2)report = 1;
++						ntrans = atol((char*)p);
++# ifdef DEBUG
++						if (debug)print("N. trans (%%a) now %d\n",ntrans);
++# endif
++						continue;
++					case 'k': case 'K': /* overriden packed char classes */
++						while (*p && !isdigit(*p))p++;
++						if (report==2) report=1;
++						free(pchar);
++						pchlen = atol((char*)p);
++# ifdef DEBUG
++						if (debug) print( "Size classes (%%k) now %d\n",pchlen);
++# endif
++						pchar=pcptr=myalloc(pchlen, sizeof(*pchar));
++						continue;
++					case '{':
++						lgate();
++						while(getl(p) && strcmp((char*)p,"%}") != 0)
++							Bprint(&fout, "%s\n",(char*)p);
++						if(p[0] == '%') continue;
++						error("Premature eof");
++					case 's': case 'S':		/* start conditions */
++						lgate();
++						while(*p && strchr(" \t,", *p) == 0) p++;
++						n = TRUE;
++						while(n){
++							while(*p && strchr(" \t,", *p)) p++;
++							t = p;
++							while(*p && strchr(" \t,", *p) == 0)p++;
++							if(!*p) n = FALSE;
++							*p++ = 0;
++							if (*t == 0) continue;
++							i = sptr*2;
++							Bprint(&fout,"#define %s %d\n",(char*)t,i);
++							strcpy((char*)sp, (char*)t);
++							sname[sptr++] = sp;
++							sname[sptr] = 0;	/* required by lookup */
++							if(sptr >= STARTSIZE)
++								error("Too many start conditions");
++							sp += strlen((char*)sp) + 1;
++							if(sp >= stchar+STARTCHAR)
++								error("Start conditions too long");
++						}
++						continue;
++					default:
++						warning("Invalid request %s",p);
++						continue;
++					}	/* end of switch after seeing '%' */
++				case ' ': case '\t':		/* must be code */
++					lgate();
++					Bprint(&fout, "%s\n",(char*)p);
++					continue;
++				default:		/* definition */
++					while(*p && !isspace(*p)) p++;
++					if(*p == 0)
++						continue;
++					prev = *p;
++					*p = 0;
++					bptr = p+1;
++					yylval.cp = buf;
++					if(isdigit(buf[0]))
++						warning("Substitution strings may not begin with digits");
++					return(freturn(STR));
++				}
++			}
++			/* still sect 1, but prev != '\n' */
++			else {
++				p = bptr;
++				while(*p && isspace(*p)) p++;
++				if(*p == 0)
++					warning("No translation given - null string assumed");
++				strcpy((char*)token, (char*)p);
++				yylval.cp = token;
++				prev = '\n';
++				return(freturn(STR));
++			}
++		}
++		/* end of section one processing */
++	} else if(sect == RULESECTION){		/* rules and actions */
++		while(!eof){
++			switch(c=gch()){
++			case '\0':
++				return(freturn(0));
++			case '\n':
++				if(prev == '\n') continue;
++				x = NEWE;
++				break;
++			case ' ':
++			case '\t':
++				if(sectbegin == TRUE){
++					cpyact();
++					while((c=gch()) && c != '\n');
++					continue;
++				}
++				if(!funcflag)phead2();
++				funcflag = TRUE;
++				Bprint(&fout,"case %d:\n",casecount);
++				if(cpyact())
++					Bprint(&fout,"break;\n");
++				while((c=gch()) && c != '\n');
++				if(peek == ' ' || peek == '\t' || sectbegin == TRUE){
++					warning("Executable statements should occur right after %%");
++					continue;
++				}
++				x = NEWE;
++				break;
++			case '%':
++				if(prev != '\n') goto character;
++				if(peek == '{'){	/* included code */
++					getl(buf);
++					while(!eof && getl(buf) && strcmp("%}",(char*)buf) != 0)
++						Bprint(&fout,"%s\n",(char*)buf);
++					continue;
++				}
++				if(peek == '%'){
++					gch();
++					gch();
++					x = DELIM;
++					break;
++				}
++				goto character;
++			case '|':
++				if(peek == ' ' || peek == '\t' || peek == '\n'){
++					Bprint(&fout,"%d\n",30000+casecount++);
++					continue;
++				}
++				x = '|';
++				break;
++			case '$':
++				if(peek == '\n' || peek == ' ' || peek == '\t' || peek == '|' || peek == '/'){
++					x = c;
++					break;
++				}
++				goto character;
++			case '^':
++				if(prev != '\n' && scon != TRUE) goto character;	/* valid only at line begin */
++				x = c;
++				break;
++			case '?':
++			case '+':
++			case '.':
++			case '*':
++			case '(':
++			case ')':
++			case ',':
++			case '/':
++				x = c;
++				break;
++			case '}':
++				iter = FALSE;
++				x = c;
++				break;
++			case '{':	/* either iteration or definition */
++				if(isdigit(c=gch())){	/* iteration */
++					iter = TRUE;
++				ieval:
++					i = 0;
++					while(isdigit(c)){
++						token[i++] = c;
++						c = gch();
++					}
++					token[i] = 0;
++					yylval.i = atol((char*)token);
++					munputc(c);
++					x = ITER;
++					break;
++				} else {		/* definition */
++					i = 0;
++					while(c && c!='}'){
++						token[i++] = c;
++						c = gch();
++					}
++					token[i] = 0;
++					i = lookup(token,def);
++					if(i < 0)
++						warning("Definition %s not found",token);
++					else
++						munputs(subs[i]);
++					continue;
++				}
++			case '<':		/* start condition ? */
++				if(prev != '\n')		/* not at line begin, not start */
++					goto character;
++				t = slptr;
++				do {
++					i = 0;
++					c = gch();
++					while(c != ',' && c && c != '>'){
++						token[i++] = c;
++						c = gch();
++					}
++					token[i] = 0;
++					if(i == 0)
++						goto character;
++					i = lookup(token,sname);
++					if(i < 0) {
++						warning("Undefined start condition %s",token);
++						continue;
++					}
++					*slptr++ = i+1;
++				} while(c && c != '>');
++				*slptr++ = 0;
++				/* check if previous value re-usable */
++				for (xp=slist; xp<t; ){
++					if (strcmp((char*)xp, (char*)t)==0)
++						break;
++					while (*xp++);
++				}
++				if (xp<t){
++					/* re-use previous pointer to string */
++					slptr=t;
++					t=xp;
++				}
++				if(slptr > slist+STARTSIZE)		/* note not packed ! */
++					error("Too many start conditions used");
++				yylval.cp = t;
++				x = SCON;
++				break;
++			case '"':
++				i = 0;
++				while((c=gch()) && c != '"' && c != '\n'){
++					if(c == '\\') c = usescape(gch());
++					token[i++] = c;
++					if(i > TOKENSIZE){
++						warning("String too long");
++						i = TOKENSIZE-1;
++						break;
++					}
++				}
++				if(c == '\n') {
++					yyline--;
++					warning("Non-terminated string");
++					yyline++;
++				}
++				token[i] = 0;
++				if(i == 0)x = NULLS;
++				else if(i == 1){
++					yylval.i = token[0];
++					x = CHAR;
++				} else {
++					yylval.cp = token;
++					x = STR;
++				}
++				break;
++			case '[':
++				for(i=1;i<NCH;i++) symbol[i] = 0;
++				x = CCL;
++				if((c = gch()) == '^'){
++					x = NCCL;
++					c = gch();
++				}
++				while(c != ']' && c){
++					if(c == '\\') c = usescape(gch());
++					symbol[c] = 1;
++					j = c;
++					if((c=gch()) == '-' && peek != ']'){		/* range specified */
++						c = gch();
++						if(c == '\\') c = usescape(gch());
++						k = c;
++						if(j > k) {
++							n = j;
++							j = k;
++							k = n;
++						}
++						if(!(('A' <= j && k <= 'Z') ||
++						     ('a' <= j && k <= 'z') ||
++						     ('0' <= j && k <= '9')))
++							warning("Non-portable Character Class");
++						for(n=j+1;n<=k;n++)
++							symbol[n] = 1;		/* implementation dependent */
++						c = gch();
++					}
++				}
++				/* try to pack ccl's */
++				i = 0;
++				for(j=0;j<NCH;j++)
++					if(symbol[j])token[i++] = j;
++				token[i] = 0;
++				p = ccl;
++				while(p <ccptr && strcmp((char*)token,(char*)p) != 0)p++;
++				if(p < ccptr)	/* found it */
++					yylval.cp = p;
++				else {
++					yylval.cp = ccptr;
++					strcpy((char*)ccptr,(char*)token);
++					ccptr += strlen((char*)token) + 1;
++					if(ccptr >= ccl+CCLSIZE)
++						error("Too many large character classes");
++				}
++				cclinter(x==CCL);
++				break;
++			case '\\':
++				c = usescape(gch());
++			default:
++			character:
++				if(iter){	/* second part of an iteration */
++					iter = FALSE;
++					if('0' <= c && c <= '9')
++						goto ieval;
++				}
++				if(isalpha(peek)){
++					i = 0;
++					yylval.cp = token;
++					token[i++] = c;
++					while(isalpha(peek))
++						token[i++] = gch();
++					if(peek == '?' || peek == '*' || peek == '+')
++						munputc(token[--i]);
++					token[i] = 0;
++					if(i == 1){
++						yylval.i = token[0];
++						x = CHAR;
++					}
++					else x = STR;
++				} else {
++					yylval.i = c;
++					x = CHAR;
++				}
++			}
++			scon = FALSE;
++			if(x == SCON)scon = TRUE;
++			sectbegin = FALSE;
++			return(freturn(x));
++		}
++	}
++	/* section three */
++	ptail();
++# ifdef DEBUG
++	if(debug)
++		Bprint(&fout,"\n/*this comes from section three - debug */\n");
++# endif
++	while(getl(buf) && !eof)
++		Bprint(&fout,"%s\n",(char*)buf);
++	return(freturn(0));
++}
++/* end of yylex */
++# ifdef DEBUG
++int
++freturn(int i)
++{
++	if(yydebug) {
++		print("now return ");
++		if(i < NCH) allprint(i);
++		else print("%d",i);
++		printf("   yylval = ");
++		switch(i){
++			case STR: case CCL: case NCCL:
++				strpt(yylval.cp);
++				break;
++			case CHAR:
++				allprint(yylval.i);
++				break;
++			default:
++				print("%d",yylval.i);
++				break;
++		}
++		print("\n");
++	}
++	return(i);
++}
++# endif
+diff --git a/lex/sub1.c b/lex/sub1.c
+new file mode 100644
+index 0000000..dcbbb58
+--- /dev/null
++++ b/lex/sub1.c
+@@ -0,0 +1,614 @@
++# include "ldefs.h"
++uchar *
++getl(uchar *p)	/* return next line of input, throw away trailing '\n' */
++	/* returns 0 if eof is had immediately */
++{
++	int c;
++	uchar *s, *t;
++
++	t = s = p;
++	while(((c = gch()) != 0) && c != '\n')
++		*t++ = c;
++	*t = 0;
++	if(c == 0 && s == t) return((uchar *)0);
++	prev = '\n';
++	pres = '\n';
++	return(s);
++}
++
++void
++printerr(char *type, char *fmt, va_list argl)
++{
++	char buf[1024];
++
++	if(!eof)fprint(errorf,"%d: ",yyline);
++	fprint(errorf,"(%s) ", type);
++	vseprint(buf, buf+sizeof(buf), fmt, argl);
++	fprint(errorf, "%s\n", buf);
++}
++
++
++void
++error(char *s,...)
++{
++	va_list argl;
++
++	va_start(argl, s);
++	printerr("Error", s, argl);
++	va_end(argl);
++# ifdef DEBUG
++	if(debug && sect != ENDSECTION) {
++		sect1dump();
++		sect2dump();
++	}
++# endif
++	if(
++# ifdef DEBUG
++		debug ||
++# endif
++		report == 1) statistics();
++	exits("error");	/* error return code */
++}
++
++void
++warning(char *s,...)
++{
++	va_list argl;
++
++	va_start(argl, s);
++	printerr("Warning", s, argl);
++	va_end(argl);
++	Bflush(&fout);
++}
++
++void
++lgate(void)
++{
++	int fd;
++
++	if (lgatflg) return;
++	lgatflg=1;
++	if(foutopen == 0){
++		fd = create("lex.yy.c", OWRITE, 0666);
++		if(fd < 0)
++			error("Can't open lex.yy.c");
++		Binit(&fout, fd, OWRITE);
++		foutopen = 1;
++		}
++	phead1();
++}
++
++void
++cclinter(int sw)
++{
++		/* sw = 1 ==> ccl */
++	int i, j, k;
++	int m;
++	if(!sw){		/* is NCCL */
++		for(i=1;i<NCH;i++)
++			symbol[i] ^= 1;			/* reverse value */
++	}
++	for(i=1;i<NCH;i++)
++		if(symbol[i]) break;
++	if(i >= NCH) return;
++	i = cindex[i];
++	/* see if ccl is already in our table */
++	j = 0;
++	if(i){
++		for(j=1;j<NCH;j++){
++			if((symbol[j] && cindex[j] != i) ||
++			   (!symbol[j] && cindex[j] == i)) break;
++		}
++	}
++	if(j >= NCH) return;		/* already in */
++	m = 0;
++	k = 0;
++	for(i=1;i<NCH;i++)
++		if(symbol[i]){
++			if(!cindex[i]){
++				cindex[i] = ccount;
++				symbol[i] = 0;
++				m = 1;
++			} else k = 1;
++		}
++			/* m == 1 implies last value of ccount has been used */
++	if(m)ccount++;
++	if(k == 0) return;	/* is now in as ccount wholly */
++	/* intersection must be computed */
++	for(i=1;i<NCH;i++){
++		if(symbol[i]){
++			m = 0;
++			j = cindex[i];	/* will be non-zero */
++			for(k=1;k<NCH;k++){
++				if(cindex[k] == j){
++					if(symbol[k]) symbol[k] = 0;
++					else {
++						cindex[k] = ccount;
++						m = 1;
++					}
++				}
++			}
++			if(m)ccount++;
++		}
++	}
++}
++
++int
++usescape(int c)
++{
++	int d;
++	switch(c){
++	case 'n': c = '\n'; break;
++	case 'r': c = '\r'; break;
++	case 't': c = '\t'; break;
++	case 'b': c = '\b'; break;
++	case 'f': c = 014; break;		/* form feed for ascii */
++	case '0': case '1': case '2': case '3':
++	case '4': case '5': case '6': case '7':
++		c -= '0';
++		while('0' <= (d=gch()) && d <= '7'){
++			c = c * 8 + (d-'0');
++			if(!('0' <= peek && peek <= '7')) break;
++			}
++		break;
++	}
++	return(c);
++}
++
++int
++lookup(uchar *s, uchar **t)
++{
++	int i;
++	i = 0;
++	while(*t){
++		if(strcmp((char *)s, *(char **)t) == 0)
++			return(i);
++		i++;
++		t++;
++	}
++	return(-1);
++}
++
++int
++cpyact(void)
++{ /* copy C action to the next ; or closing } */
++	int brac, c, mth;
++	int savline, sw;
++
++	brac = 0;
++	sw = TRUE;
++	savline = 0;
++
++while(!eof){
++	c = gch();
++swt:
++	switch( c ){
++
++case '|':	if(brac == 0 && sw == TRUE){
++			if(peek == '|')gch();		/* eat up an extra '|' */
++			return(0);
++		}
++		break;
++
++case ';':
++		if( brac == 0 ){
++			Bputc(&fout, c);
++			Bputc(&fout, '\n');
++			return(1);
++		}
++		break;
++
++case '{':
++		brac++;
++		savline=yyline;
++		break;
++
++case '}':
++		brac--;
++		if( brac == 0 ){
++			Bputc(&fout, c);
++			Bputc(&fout, '\n');
++			return(1);
++		}
++		break;
++
++case '/':	/* look for comments */
++		Bputc(&fout, c);
++		c = gch();
++		if( c != '*' ) goto swt;
++
++		/* it really is a comment */
++
++		Bputc(&fout, c);
++		savline=yyline;
++		while( c=gch() ){
++			if( c=='*' ){
++				Bputc(&fout, c);
++				if( (c=gch()) == '/' ) goto loop;
++			}
++			Bputc(&fout, c);
++		}
++		yyline=savline;
++		error( "EOF inside comment" );
++
++case '\'':	/* character constant */
++		mth = '\'';
++		goto string;
++
++case '"':	/* character string */
++		mth = '"';
++
++	string:
++
++		Bputc(&fout, c);
++		while( c=gch() ){
++			if( c=='\\' ){
++				Bputc(&fout, c);
++				c=gch();
++			}
++			else if( c==mth ) goto loop;
++			Bputc(&fout, c);
++			if (c == '\n') {
++				yyline--;
++				error( "Non-terminated string or character constant");
++			}
++		}
++		error( "EOF in string or character constant" );
++
++case '\0':
++		yyline = savline;
++		error("Action does not terminate");
++default:
++		break;		/* usual character */
++		}
++loop:
++	if(c != ' ' && c != '\t' && c != '\n') sw = FALSE;
++	Bputc(&fout, c);
++	}
++	error("Premature EOF");
++	return(0);
++}
++
++int
++gch(void){
++	int c;
++	prev = pres;
++	c = pres = peek;
++	peek = pushptr > pushc ? *--pushptr : Bgetc(fin);
++	if(peek == Beof && sargc > 1){
++		Bterm(fin);
++		fin = Bopen(sargv[fptr++],OREAD);
++		if(fin == 0)
++			error("Cannot open file %s",sargv[fptr-1]);
++		peek = Bgetc(fin);
++		sargc--;
++		sargv++;
++	}
++	if(c == Beof) {
++		eof = TRUE;
++		Bterm(fin);
++		fin = 0;
++		return(0);
++	}
++	if(c == '\n')yyline++;
++	return(c);
++}
++
++int
++mn2(int a, int d, uintptr c)
++{
++	name[tptr] = a;
++	left[tptr] = d;
++	right[tptr] = c;
++	parent[tptr] = 0;
++	nullstr[tptr] = 0;
++	switch(a){
++	case RSTR:
++		parent[d] = tptr;
++		break;
++	case BAR:
++	case RNEWE:
++		if(nullstr[d] || nullstr[c]) nullstr[tptr] = TRUE;
++		parent[d] = parent[c] = tptr;
++		break;
++	case RCAT:
++	case DIV:
++		if(nullstr[d] && nullstr[c])nullstr[tptr] = TRUE;
++		parent[d] = parent[c] = tptr;
++		break;
++	case RSCON:
++		parent[d] = tptr;
++		nullstr[tptr] = nullstr[d];
++		break;
++# ifdef DEBUG
++	default:
++		warning("bad switch mn2 %d %d",a,d);
++		break;
++# endif
++		}
++	if(tptr > treesize)
++		error("Parse tree too big %s",(treesize == TREESIZE?"\nTry using %e num":""));
++	return(tptr++);
++}
++
++int
++mnp(int a, void *p)
++{
++	name[tptr] = a;
++	left[tptr] = 0;
++	parent[tptr] = 0;
++	nullstr[tptr] = 0;
++	ptr[tptr] = p;
++	switch(a){
++	case RCCL:
++	case RNCCL:
++		if(strlen(p) == 0) nullstr[tptr] = TRUE;
++		break;
++	default:
++		error("bad switch mnp %d %P", a, p);
++		break;
++	}
++	if(tptr > treesize)
++		error("Parse tree too big %s",(treesize == TREESIZE?"\nTry using %e num":""));
++	return(tptr++);
++}
++
++int
++mn1(int a, int d)
++{
++	name[tptr] = a;
++	left[tptr] = d;
++	parent[tptr] = 0;
++	nullstr[tptr] = 0;
++	switch(a){
++	case STAR:
++	case QUEST:
++		nullstr[tptr] = TRUE;
++		parent[d] = tptr;
++		break;
++	case PLUS:
++	case CARAT:
++		nullstr[tptr] = nullstr[d];
++		parent[d] = tptr;
++		break;
++	case S2FINAL:
++		nullstr[tptr] = TRUE;
++		break;
++# ifdef DEBUG
++	case FINAL:
++	case S1FINAL:
++		break;
++	default:
++		warning("bad switch mn1 %d %d",a,d);
++		break;
++# endif
++	}
++	if(tptr > treesize)
++		error("Parse tree too big %s",(treesize == TREESIZE?"\nTry using %e num":""));
++	return(tptr++);
++}
++
++int
++mn0(int a)
++{
++	name[tptr] = a;
++	parent[tptr] = 0;
++	nullstr[tptr] = 0;
++	if(a >= NCH) switch(a){
++	case RNULLS: nullstr[tptr] = TRUE; break;
++# ifdef DEBUG
++	default:
++		warning("bad switch mn0 %d",a);
++		break;
++# endif
++	}
++	if(tptr > treesize)
++		error("Parse tree too big %s",(treesize == TREESIZE?"\nTry using %e num":""));
++	return(tptr++);
++}
++
++void
++munputc(int p)
++{
++	*pushptr++ = peek;		/* watch out for this */
++	peek = p;
++	if(pushptr >= pushc+TOKENSIZE)
++		error("Too many characters pushed");
++}
++
++void
++munputs(uchar *p)
++{
++	int i,j;
++	*pushptr++ = peek;
++	peek = p[0];
++	i = strlen((char*)p);
++	for(j = i-1; j>=1; j--)
++		*pushptr++ = p[j];
++	if(pushptr >= pushc+TOKENSIZE)
++		error("Too many characters pushed");
++}
++
++int
++dupl(int n)
++{
++	/* duplicate the subtree whose root is n, return ptr to it */
++	int i;
++
++	i = name[n];
++	if(i < NCH) return(mn0(i));
++	switch(i){
++	case RNULLS:
++		return(mn0(i));
++	case RCCL: case RNCCL:
++		return(mnp(i,ptr[n]));
++	case FINAL: case S1FINAL: case S2FINAL:
++		return(mn1(i,left[n]));
++	case STAR: case QUEST: case PLUS: case CARAT:
++		return(mn1(i,dupl(left[n])));
++	case RSTR: case RSCON:
++		return(mn2(i,dupl(left[n]),right[n]));
++	case BAR: case RNEWE: case RCAT: case DIV:
++		return(mn2(i,dupl(left[n]),dupl(right[n])));
++# ifdef DEBUG
++	default:
++		warning("bad switch dupl %d",n);
++# endif
++	}
++	return(0);
++}
++
++# ifdef DEBUG
++void
++allprint(int c)
++{
++	if(c < 0)
++		c += 256;	/* signed char */
++	switch(c){
++		case 014:
++			print("\\f");
++			charc++;
++			break;
++		case '\n':
++			print("\\n");
++			charc++;
++			break;
++		case '\t':
++			print("\\t");
++			charc++;
++			break;
++		case '\b':
++			print("\\b");
++			charc++;
++			break;
++		case ' ':
++			print("\\\bb");
++			break;
++		default:
++			if(!isprint(c)){
++				print("\\%-3o",c);
++				charc += 3;
++			} else 
++				print("%c", c);
++			break;
++	}
++	charc++;
++}
++
++void
++strpt(uchar *s)
++{
++	charc = 0;
++	while(*s){
++		allprint(*s++);
++		if(charc > LINESIZE){
++			charc = 0;
++			print("\n\t");
++		}
++	}
++}
++
++void
++sect1dump(void)
++{
++	int i;
++
++	print("Sect 1:\n");
++	if(def[0]){
++		print("str	trans\n");
++		i = -1;
++		while(def[++i])
++			print("%s\t%s\n",def[i],subs[i]);
++	}
++	if(sname[0]){
++		print("start names\n");
++		i = -1;
++		while(sname[++i])
++			print("%s\n",sname[i]);
++	}
++}
++
++void
++sect2dump(void)
++{
++	print("Sect 2:\n");
++	treedump();
++}
++
++void
++treedump(void)
++{
++	int t;
++	uchar *p;
++	print("treedump %d nodes:\n",tptr);
++	for(t=0;t<tptr;t++){
++		print("%4d ",t);
++		parent[t] ? print("p=%4d",parent[t]) : print("      ");
++		print("  ");
++		if(name[t] < NCH)
++				allprint(name[t]);
++		else switch(name[t]){
++			case RSTR:
++				print("%d ",left[t]);
++				allprint(right[t]);
++				break;
++			case RCCL:
++				print("ccl ");
++				allprint(ptr[t]);
++				break;
++			case RNCCL:
++				print("nccl ");
++				allprint(ptr[t]);
++				break;
++			case DIV:
++				print("/ %d %d",left[t],right[t]);
++				break;
++			case BAR:
++				print("| %d %d",left[t],right[t]);
++				break;
++			case RCAT:
++				print("cat %d %d",left[t],right[t]);
++				break;
++			case PLUS:
++				print("+ %d",left[t]);
++				break;
++			case STAR:
++				print("* %d",left[t]);
++				break;
++			case CARAT:
++				print("^ %d",left[t]);
++				break;
++			case QUEST:
++				print("? %d",left[t]);
++				break;
++			case RNULLS:
++				print("nullstring");
++				break;
++			case FINAL:
++				print("final %d",left[t]);
++				break;
++			case S1FINAL:
++				print("s1final %d",left[t]);	
++				break;
++			case S2FINAL:
++				print("s2final %d",left[t]);
++				break;
++			case RNEWE:
++				print("new %d %d",left[t],right[t]);
++				break;
++			case RSCON:
++				p = (uchar *)right[t];
++				print("start %s",sname[*p++-1]);
++				while(*p)
++					print(", %s",sname[*p++-1]);
++				print(" %d",left[t]);
++				break;
++			default:
++				print("unknown %d %d %d",name[t],left[t],right[t]);
++				break;
++		}
++		if(nullstr[t])print("\t(null poss.)");
++		print("\n");
++	}
++}
++# endif
+diff --git a/lex/sub2.c b/lex/sub2.c
+new file mode 100644
+index 0000000..9221aea
+--- /dev/null
++++ b/lex/sub2.c
+@@ -0,0 +1,856 @@
++# include "ldefs.h"
++void
++cfoll(int v)
++{
++	int i,j,k;
++	uchar *p;
++	i = name[v];
++	if(i < NCH) i = 1;	/* character */
++	switch(i){
++		case 1: case RSTR: case RCCL: case RNCCL: case RNULLS:
++			for(j=0;j<tptr;j++)
++				tmpstat[j] = FALSE;
++			count = 0;
++			follow(v);
++# ifdef PP
++			padd(foll,v);		/* packing version */
++# endif
++# ifndef PP
++			add(foll,v);		/* no packing version */
++# endif
++			if(i == RSTR) cfoll(left[v]);
++			else if(i == RCCL || i == RNCCL){	/* compress ccl list */
++				for(j=1; j<NCH;j++)
++					symbol[j] = (i==RNCCL);
++				p = ptr[v];
++				while(*p)
++					symbol[*p++] = (i == RCCL);
++				p = pcptr;
++				for(j=1;j<NCH;j++)
++					if(symbol[j]){
++						for(k=0;p+k < pcptr; k++)
++							if(cindex[j] == *(p+k))
++								break;
++						if(p+k >= pcptr)*pcptr++ = cindex[j];
++					}
++				*pcptr++ = 0;
++				if(pcptr > pchar + pchlen)
++					error("Too many packed character classes");
++				ptr[v] = p;
++				name[v] = RCCL;	/* RNCCL eliminated */
++# ifdef DEBUG
++				if(debug && *p){
++					print("ccl %d: %d",v,*p++);
++					while(*p)
++						print(", %d",*p++);
++					print("\n");
++				}
++# endif
++			}
++			break;
++		case CARAT:
++			cfoll(left[v]);
++			break;
++		case STAR: case PLUS: case QUEST: case RSCON: 
++			cfoll(left[v]);
++			break;
++		case BAR: case RCAT: case DIV: case RNEWE:
++			cfoll(left[v]);
++			cfoll(right[v]);
++			break;
++# ifdef DEBUG
++		case FINAL:
++		case S1FINAL:
++		case S2FINAL:
++			break;
++		default:
++			warning("bad switch cfoll %d",v);
++# endif
++	}
++}
++
++# ifdef DEBUG
++void
++pfoll(void)
++	{
++	int i,k,*p;
++	int j;
++	/* print sets of chars which may follow positions */
++	print("pos\tchars\n");
++	for(i=0;i<tptr;i++)
++		if(p=foll[i]){
++			j = *p++;
++			if(j >= 1){
++				print("%d:\t%d",i,*p++);
++				for(k=2;k<=j;k++)
++					print(", %d",*p++);
++				print("\n");
++			}
++		}
++}
++# endif
++
++void
++add(int **array, int n)
++{
++	int i, *temp;
++	uchar *ctemp;
++
++	temp = nxtpos;
++	ctemp = tmpstat;
++	array[n] = nxtpos;		/* note no packing is done in positions */
++	*temp++ = count;
++	for(i=0;i<tptr;i++)
++		if(ctemp[i] == TRUE)
++			*temp++ = i;
++	nxtpos = temp;
++	if(nxtpos >= positions+maxpos)
++		error("Too many positions %s",(maxpos== MAXPOS?"\nTry using %p num":""));
++	return;
++}
++
++void
++follow(int v)
++{
++	int p;
++	if(v >= tptr-1)return;
++	p = parent[v];
++	if(p == 0) return;
++	switch(name[p]){
++			/* will not be CHAR RNULLS FINAL S1FINAL S2FINAL RCCL RNCCL */
++		case RSTR:
++			if(tmpstat[p] == FALSE){
++				count++;
++				tmpstat[p] = TRUE;
++			}
++			break;
++		case STAR: case PLUS:
++			first(v);
++			follow(p);
++			break;
++		case BAR: case QUEST: case RNEWE:
++			follow(p);
++			break;
++		case RCAT: case DIV: 
++			if(v == left[p]){
++				if(nullstr[right[p]])
++					follow(p);
++				first(right[p]);
++			}
++			else follow(p);
++			break;
++		case RSCON: case CARAT: 
++			follow(p);
++			break;
++# ifdef DEBUG
++		default:
++			warning("bad switch follow %d",p);
++# endif
++	}
++}
++
++void
++first(int v)	/* calculate set of positions with v as root which can be active initially */
++{
++	int i;
++	uchar *p;
++	i = name[v];
++	if(i < NCH)i = 1;
++	switch(i){
++		case 1: case RCCL: case RNCCL: case RNULLS: case FINAL: case S1FINAL: case S2FINAL:
++			if(tmpstat[v] == FALSE){
++				count++;
++				tmpstat[v] = TRUE;
++			}
++			break;
++		case BAR: case RNEWE:
++			first(left[v]);
++			first(right[v]);
++			break;
++		case CARAT:
++			if(stnum % 2 == 1)
++				first(left[v]);
++			break;
++		case RSCON:
++			i = stnum/2 +1;
++			p = (uchar*)right[v];
++			while(*p)
++				if(*p++ == i){
++					first(left[v]);
++					break;
++				}
++			break;
++		case STAR: case QUEST: case PLUS:  case RSTR:
++			first(left[v]);
++			break;
++		case RCAT: case DIV:
++			first(left[v]);
++			if(nullstr[left[v]])
++				first(right[v]);
++			break;
++# ifdef DEBUG
++		default:
++			warning("bad switch first %d",v);
++# endif
++	}
++}
++
++void
++cgoto(void)
++{
++	int i, j, s;
++	int npos, curpos, n;
++	int tryit;
++	uchar tch[NCH];
++	int tst[NCH];
++	uchar *q;
++
++	/* generate initial state, for each start condition */
++	Bprint(&fout,"int yyvstop[] = {\n0,\n");
++	while(stnum < 2 || stnum/2 < sptr){
++		for(i = 0; i<tptr; i++) tmpstat[i] = 0;
++		count = 0;
++		if(tptr > 0)first(tptr-1);
++		add(state,stnum);
++# ifdef DEBUG
++		if(debug){
++			if(stnum > 1)
++				print("%s:\n",sname[stnum/2]);
++			pstate(stnum);
++		}
++# endif
++		stnum++;
++	}
++	stnum--;
++	/* even stnum = might not be at line begin */
++	/* odd stnum  = must be at line begin */
++	/* even states can occur anywhere, odd states only at line begin */
++	for(s = 0; s <= stnum; s++){
++		tryit = FALSE;
++		cpackflg[s] = FALSE;
++		sfall[s] = -1;
++		acompute(s);
++		for(i=0;i<NCH;i++) symbol[i] = 0;
++		npos = *state[s];
++		for(i = 1; i<=npos; i++){
++			curpos = *(state[s]+i);
++			if(name[curpos] < NCH) symbol[name[curpos]] = TRUE;
++			else switch(name[curpos]){
++			case RCCL:
++				tryit = TRUE;
++				q = ptr[curpos];
++				while(*q){
++					for(j=1;j<NCH;j++)
++						if(cindex[j] == *q)
++							symbol[j] = TRUE;
++					q++;
++				}
++				break;
++			case RSTR:
++				symbol[right[curpos]] = TRUE;
++				break;
++# ifdef DEBUG
++			case RNULLS:
++			case FINAL:
++			case S1FINAL:
++			case S2FINAL:
++				break;
++			default:
++				warning("bad switch cgoto %d state %d",curpos,s);
++				break;
++# endif
++			}
++		}
++# ifdef DEBUG
++		if(debug){
++			print("State %d transitions on:\n\t",s);
++			charc = 0;
++			for(i = 1; i<NCH; i++){
++				if(symbol[i]) allprint(i);
++				if(charc > LINESIZE){
++					charc = 0;
++					print("\n\t");
++				}
++			}
++			print("\n");
++		}
++# endif
++		/* for each char, calculate next state */
++		n = 0;
++		for(i = 1; i<NCH; i++){
++			if(symbol[i]){
++				nextstate(s,i);		/* executed for each state, transition pair */
++				xstate = notin(stnum);
++				if(xstate == -2) warning("bad state  %d %o",s,i);
++				else if(xstate == -1){
++					if(stnum >= nstates)
++						error("Too many states %s",(nstates == NSTATES ? "\nTry using %n num":""));
++					add(state,++stnum);
++# ifdef DEBUG
++					if(debug)pstate(stnum);
++# endif
++					tch[n] = i;
++					tst[n++] = stnum;
++				} else {		/* xstate >= 0 ==> state exists */
++					tch[n] = i;
++					tst[n++] = xstate;
++				}
++			}
++		}
++		tch[n] = 0;
++		tst[n] = -1;
++		/* pack transitions into permanent array */
++		if(n > 0) packtrans(s,tch,tst,n,tryit);
++		else gotof[s] = -1;
++	}
++	Bprint(&fout,"0};\n");
++}
++
++/*	Beware -- 70% of total CPU time is spent in this subroutine -
++	if you don't believe me - try it yourself ! */
++void
++nextstate(int s, int c)
++{
++	int j, *newpos;
++	uchar *temp, *tz;
++	int *pos, i, *f, num, curpos, number;
++	/* state to goto from state s on char c */
++	num = *state[s];
++	temp = tmpstat;
++	pos = state[s] + 1;
++	for(i = 0; i<num; i++){
++		curpos = *pos++;
++		j = name[curpos];
++		if(j < NCH && j == c
++		|| j == RSTR && c == right[curpos]
++		|| j == RCCL && member(c, ptr[curpos])){
++			f = foll[curpos];
++			number = *f;
++			newpos = f+1;
++			for(j=0;j<number;j++)
++				temp[*newpos++] = 2;
++		}
++	}
++	j = 0;
++	tz = temp + tptr;
++	while(temp < tz){
++		if(*temp == 2){
++			j++;
++			*temp++ = 1;
++		}
++		else *temp++ = 0;
++	}
++	count = j;
++}
++
++int
++notin(int n)
++{	/* see if tmpstat occurs previously */
++	int *j,k;
++	uchar *temp;
++	int i;
++
++	if(count == 0)
++		return(-2);
++	temp = tmpstat;
++	for(i=n;i>=0;i--){	/* for each state */
++		j = state[i];
++		if(count == *j++){
++			for(k=0;k<count;k++)
++				if(!temp[*j++])break;
++			if(k >= count)
++				return(i);
++		}
++	}
++	return(-1);
++}
++
++void
++packtrans(int st, uchar *tch, int *tst, int cnt, int tryit)
++{
++	/* pack transitions into nchar, nexts */
++	/* nchar is terminated by '\0', nexts uses cnt, followed by elements */
++	/* gotof[st] = index into nchr, nexts for state st */
++
++	/* sfall[st] =  t implies t is fall back state for st */
++	/*	        == -1 implies no fall back */
++
++	int i,j,k;
++	int cmin, cval, tcnt, diff, p, *ast;
++	uchar *ach;
++	int go[NCH], temp[NCH], c;
++	int swork[NCH];
++	uchar cwork[NCH];
++	int upper;
++
++	rcount += cnt;
++	cmin = -1;
++	cval = NCH;
++	ast = tst;
++	ach = tch;
++	/* try to pack transitions using ccl's */
++	if(tryit){	/* ccl's used */
++		for(i=1;i<NCH;i++){
++			go[i] = temp[i] = -1;
++			symbol[i] = 1;
++		}
++		for(i=0;i<cnt;i++){
++			go[tch[i]] = tst[i];
++			symbol[tch[i]] = 0;
++		}
++		for(i=0; i<cnt;i++){
++			c = match[tch[i]];
++			if(go[c] != tst[i] || c == tch[i])
++				temp[tch[i]] = tst[i];
++		}
++		/* fill in error entries */
++		for(i=1;i<NCH;i++)
++			if(symbol[i]) temp[i] = -2;	/* error trans */
++		/* count them */
++		k = 0;
++		for(i=1;i<NCH;i++)
++			if(temp[i] != -1)k++;
++		if(k <cnt){	/* compress by char */
++# ifdef DEBUG
++			if(debug) print("use compression  %d,  %d vs %d\n",st,k,cnt);
++# endif
++			k = 0;
++			for(i=1;i<NCH;i++)
++				if(temp[i] != -1){
++					cwork[k] = i;
++					swork[k++] = (temp[i] == -2 ? -1 : temp[i]);
++				}
++			cwork[k] = 0;
++# ifdef PC
++			ach = cwork;
++			ast = swork;
++			cnt = k;
++			cpackflg[st] = TRUE;
++# endif
++		}
++	}
++	for(i=0; i<st; i++){	/* get most similar state */
++				/* reject state with more transitions, state already represented by a third state,
++					and state which is compressed by char if ours is not to be */
++		if(sfall[i] != -1) continue;
++		if(cpackflg[st] == 1) if(!(cpackflg[i] == 1)) continue;
++		p = gotof[i];
++		if(p == -1) /* no transitions */ continue;
++		tcnt = nexts[p];
++		if(tcnt > cnt) continue;
++		diff = 0;
++		j = 0;
++		upper = p + tcnt;
++		while(ach[j] && p < upper){
++			while(ach[j] < nchar[p] && ach[j]){diff++; j++; }
++			if(ach[j] == 0)break;
++			if(ach[j] > nchar[p]){diff=NCH;break;}
++			/* ach[j] == nchar[p] */
++			if(ast[j] != nexts[++p] || ast[j] == -1 || (cpackflg[st] && ach[j] != match[ach[j]]))diff++;
++			j++;
++		}
++		while(ach[j]){
++			diff++;
++			j++;
++		}
++		if(p < upper)diff = NCH;
++		if(diff < cval && diff < tcnt){
++			cval = diff;
++			cmin = i;
++			if(cval == 0)break;
++		}
++	}
++	/* cmin = state "most like" state st */
++# ifdef DEBUG
++	if(debug)print("select st %d for st %d diff %d\n",cmin,st,cval);
++# endif
++# ifdef PS
++	if(cmin != -1){ /* if we can use st cmin */
++		gotof[st] = nptr;
++		k = 0;
++		sfall[st] = cmin;
++		p = gotof[cmin]+1;
++		j = 0;
++		while(ach[j]){
++			/* if cmin has a transition on c, then so will st */
++			/* st may be "larger" than cmin, however */
++			while(ach[j] < nchar[p-1] && ach[j]){
++				k++;
++				nchar[nptr] = ach[j];
++				nexts[++nptr] = ast[j];
++				j++;
++			}
++			if(nchar[p-1] == 0)break;
++			if(ach[j] > nchar[p-1]){
++				warning("bad transition %d %d",st,cmin);
++				goto nopack;
++			}
++			/* ach[j] == nchar[p-1] */
++			if(ast[j] != nexts[p] || ast[j] == -1 || (cpackflg[st] && ach[j] != match[ach[j]])){
++				k++;
++				nchar[nptr] = ach[j];
++				nexts[++nptr] = ast[j];
++			}
++			p++;
++			j++;
++		}
++		while(ach[j]){
++			nchar[nptr] = ach[j];
++			nexts[++nptr] = ast[j++];
++			k++;
++		}
++		nexts[gotof[st]] = cnt = k;
++		nchar[nptr++] = 0;
++	} else {
++# endif
++nopack:
++	/* stick it in */
++		gotof[st] = nptr;
++		nexts[nptr] = cnt;
++		for(i=0;i<cnt;i++){
++			nchar[nptr] = ach[i];
++			nexts[++nptr] = ast[i];
++		}
++		nchar[nptr++] = 0;
++# ifdef PS
++	}
++# endif
++	if(cnt < 1){
++		gotof[st] = -1;
++		nptr--;
++	} else
++		if(nptr > ntrans)
++			error("Too many transitions %s",(ntrans==NTRANS?"\nTry using %a num":""));
++}
++
++# ifdef DEBUG
++void
++pstate(int s)
++{
++	int *p,i,j;
++	print("State %d:\n",s);
++	p = state[s];
++	i = *p++;
++	if(i == 0) return;
++	print("%4d",*p++);
++	for(j = 1; j<i; j++){
++		print(", %4d",*p++);
++		if(j%30 == 0)print("\n");
++	}
++	print("\n");
++	return;
++}
++# endif
++
++int
++member(int d, uchar *t)
++{
++	int c;
++	uchar *s;
++
++	c = d;
++	s = t;
++	c = cindex[c];
++	while(*s)
++		if(*s++ == c) return(1);
++	return(0);
++}
++
++# ifdef DEBUG
++void
++stprt(int i)
++{
++	int p, t;
++
++	print("State %d:",i);
++	/* print actions, if any */
++	t = atable[i];
++	if(t != -1)print(" final");
++	print("\n");
++	if(cpackflg[i] == TRUE)print("backup char in use\n");
++	if(sfall[i] != -1)print("fall back state %d\n",sfall[i]);
++	p = gotof[i];
++	if(p == -1) return;
++	print("(%d transitions)\n",nexts[p]);
++	while(nchar[p]){
++		charc = 0;
++		if(nexts[p+1] >= 0)
++			print("%d\t",nexts[p+1]);
++		else print("err\t");
++		allprint(nchar[p++]);
++		while(nexts[p] == nexts[p+1] && nchar[p]){
++			if(charc > LINESIZE){
++				charc = 0;
++				print("\n\t");
++			}
++			allprint(nchar[p++]);
++		}
++		print("\n");
++	}
++	print("\n");
++}
++# endif
++
++void
++acompute(int s)	/* compute action list = set of poss. actions */
++{
++	int *p, i, j;
++	int cnt, m;
++	int temp[300], k, neg[300], n;
++
++	k = 0;
++	n = 0;
++	p = state[s];
++	cnt = *p++;
++	if(cnt > 300)
++		error("Too many positions for one state - acompute");
++	for(i=0;i<cnt;i++){
++		if(name[*p] == FINAL)temp[k++] = left[*p];
++		else if(name[*p] == S1FINAL){temp[k++] = left[*p];
++			if (left[*p] >= NACTIONS) error("Too many right contexts");
++			extra[left[*p]] = 1;
++		} else if(name[*p] == S2FINAL)neg[n++] = left[*p];
++		p++;
++	}
++	atable[s] = -1;
++	if(k < 1 && n < 1) return;
++# ifdef DEBUG
++	if(debug) print("final %d actions:",s);
++# endif
++	/* sort action list */
++	for(i=0; i<k; i++)
++		for(j=i+1;j<k;j++)
++			if(temp[j] < temp[i]){
++				m = temp[j];
++				temp[j] = temp[i];
++				temp[i] = m;
++			}
++	/* remove dups */
++	for(i=0;i<k-1;i++)
++		if(temp[i] == temp[i+1]) temp[i] = 0;
++	/* copy to permanent quarters */
++	atable[s] = aptr;
++# ifdef DEBUG
++	Bprint(&fout,"/* actions for state %d */",s);
++# endif
++	Bputc(&fout, '\n');
++	for(i=0;i<k;i++)
++		if(temp[i] != 0){
++			Bprint(&fout,"%d,\n",temp[i]);
++# ifdef DEBUG
++			if(debug)
++				print("%d ",temp[i]);
++# endif
++			aptr++;
++		}
++	for(i=0;i<n;i++){		/* copy fall back actions - all neg */
++		Bprint(&fout,"%d,\n",neg[i]);
++		aptr++;
++# ifdef DEBUG
++		if(debug)print("%d ",neg[i]);
++# endif
++	}
++# ifdef DEBUG
++	if(debug)print("\n");
++# endif
++	Bprint(&fout,"0,\n");
++	aptr++;
++	return;
++}
++
++# ifdef DEBUG
++void
++pccl(void) {
++	/* print character class sets */
++	int i, j;
++
++	print("char class intersection\n");
++	for(i=0; i< ccount; i++){
++		charc = 0;
++		print("class %d:\n\t",i);
++		for(j=1;j<NCH;j++)
++			if(cindex[j] == i){
++				allprint(j);
++				if(charc > LINESIZE){
++					print("\n\t");
++					charc = 0;
++				}
++			}
++		print("\n");
++	}
++	charc = 0;
++	print("match:\n");
++	for(i=0;i<NCH;i++){
++		allprint(match[i]);
++		if(charc > LINESIZE){
++			print("\n");
++			charc = 0;
++		}
++	}
++	print("\n");
++	return;
++}
++# endif
++
++void
++mkmatch(void)
++{
++	int i;
++	uchar tab[NCH];
++
++	for(i=0; i<ccount; i++)
++		tab[i] = 0;
++	for(i=1;i<NCH;i++)
++		if(tab[cindex[i]] == 0)
++			tab[cindex[i]] = i;
++	/* tab[i] = principal char for new ccl i */
++	for(i = 1; i<NCH; i++)
++		match[i] = tab[cindex[i]];
++	return;
++}
++
++void
++layout(void)
++{
++	/* format and output final program's tables */
++	int i, j, k;
++	int  top, bot, startup, omin;
++
++	for(i=0; i<outsize;i++)
++		verify[i] = advance[i] = 0;
++	omin = 0;
++	yytop = 0;
++	for(i=0; i<= stnum; i++){	/* for each state */
++		j = gotof[i];
++		if(j == -1){
++			stoff[i] = 0;
++			continue;
++			}
++		bot = j;
++		while(nchar[j])j++;
++		top = j - 1;
++# ifdef DEBUG
++		if (debug) {
++			print("State %d: (layout)\n", i);
++			for(j=bot; j<=top;j++) {
++				print("  %o", nchar[j]);
++				if (j%10==0) print("\n");
++			}
++			print("\n");
++		}
++# endif
++		while(verify[omin+NCH]) omin++;
++		startup = omin;
++# ifdef DEBUG
++		if (debug) print("bot,top %d, %d startup begins %d\n",bot,top,startup);
++# endif
++		do {
++			startup += 1;
++			if(startup > outsize - NCH)
++				error("output table overflow");
++			for(j = bot; j<= top; j++){
++				k = startup + nchar[j];
++				if(verify[k])break;
++			}
++		} while (j <= top);
++		/* have found place */
++# ifdef DEBUG
++		if (debug) print(" startup going to be %d\n", startup);
++# endif
++		for(j = bot; j<= top; j++){
++			k = startup + nchar[j];
++			verify[k] = i+1;			/* state number + 1*/
++			advance[k] = nexts[j+1]+1;		/* state number + 1*/
++			if(yytop < k) yytop = k;
++		}
++		stoff[i] = startup;
++	}
++
++	/* stoff[i] = offset into verify, advance for trans for state i */
++	/* put out yywork */
++	Bprint(&fout,"# define YYTYPE %s\n",stnum+1 >= NCH ? "int" : "Uchar");
++	Bprint(&fout,"struct yywork { YYTYPE verify, advance; } yycrank[] = {\n");
++	for(i=0;i<=yytop;i+=4){
++		for(j=0;j<4;j++){
++			k = i+j;
++			if(verify[k])
++				Bprint(&fout,"%d,%d,\t",verify[k],advance[k]);
++			else
++				Bprint(&fout,"0,0,\t");
++		}
++		Bputc(&fout, '\n');
++	}
++	Bprint(&fout,"0,0};\n");
++
++	/* put out yysvec */
++
++	Bprint(&fout,"struct yysvf yysvec[] = {\n");
++	Bprint(&fout,"0,\t0,\t0,\n");
++	for(i=0;i<=stnum;i++){	/* for each state */
++		if(cpackflg[i])stoff[i] = -stoff[i];
++		Bprint(&fout,"yycrank+%d,\t",stoff[i]);
++		if(sfall[i] != -1)
++			Bprint(&fout,"yysvec+%d,\t", sfall[i]+1);	/* state + 1 */
++		else Bprint(&fout,"0,\t\t");
++		if(atable[i] != -1)
++			Bprint(&fout,"yyvstop+%d,",atable[i]);
++		else Bprint(&fout,"0,\t");
++# ifdef DEBUG
++		Bprint(&fout,"\t\t/* state %d */",i);
++# endif
++		Bputc(&fout, '\n');
++	}
++	Bprint(&fout,"0,\t0,\t0};\n");
++
++	/* put out yymatch */
++	
++	Bprint(&fout,"struct yywork *yytop = yycrank+%d;\n",yytop);
++	Bprint(&fout,"struct yysvf *yybgin = yysvec+1;\n");
++	Bprint(&fout,"Uchar yymatch[] = {\n");
++	for(i=0; i<NCH; i+=8){
++		for(j=0; j<8; j++){
++			int fbch;
++			fbch = match[i+j];
++			if(isprint(fbch) && fbch != '\'' && fbch != '\\')
++				Bprint(&fout,"'%c' ,",fbch);
++			else Bprint(&fout,"0%-3o,",fbch);
++		}
++		Bputc(&fout, '\n');
++	}
++	Bprint(&fout,"0};\n");
++	/* put out yyextra */
++	Bprint(&fout,"Uchar yyextra[] = {\n");
++	for(i=0;i<casecount;i+=8){
++		for(j=0;j<8;j++)
++			Bprint(&fout, "%d,", i+j<NACTIONS ?
++				extra[i+j] : 0);
++		Bputc(&fout, '\n');
++	}
++	Bprint(&fout,"0};\n");
++}
++
++# ifdef PP
++void
++padd(int **array, int n)
++{
++	int i, *j, k;
++
++	array[n] = nxtpos;
++	if(count == 0){
++		*nxtpos++ = 0;
++		return;
++	}
++	for(i=tptr-1;i>=0;i--){
++		j = array[i];
++		if(j && *j++ == count){
++			for(k=0;k<count;k++)
++				if(!tmpstat[*j++])break;
++			if(k >= count){
++				array[n] = array[i];
++				return;
++			}
++		}
++	}
++	add(array,n);
++}
++# endif
