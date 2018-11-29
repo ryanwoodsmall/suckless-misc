@@ -69,7 +69,7 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Wed Nov 29 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Nov 28 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - make sure we have full url to 9base wrapper
 
 * Tue Sep 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
