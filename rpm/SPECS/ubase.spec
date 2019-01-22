@@ -5,14 +5,14 @@
 
 Name:		ubase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	4%{?dist}
+Release:	5%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.1.20
+BuildRequires:	musl-static >= 1.1.21
 BuildRequires:	git
 
 %description
@@ -59,6 +59,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Tue Jan 22 2019 ryan woodsmall <rwoodsmall@gmail.com>
+- release no. bump for musl-libc 1.1.21
+
 * Tue Sep 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for musl-libc 1.1.20
 
