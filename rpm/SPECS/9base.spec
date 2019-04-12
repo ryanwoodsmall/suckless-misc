@@ -6,7 +6,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	10%{?dist}
+Release:	11%{?dist}
 Summary:	suckless 9base
 Source0:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/%{name}
 
@@ -14,7 +14,7 @@ Group:		System Environment/Shells
 License:	MIT
 URL:		https://tools.suckless.org/9base
 
-BuildRequires:	musl-static >= 1.1.21
+BuildRequires:	musl-static >= 1.1.22
 BuildRequires:	git
 
 %description
@@ -69,6 +69,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Apr 11 2019 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for musl 1.1.22
+
 * Tue Jan 22 2019 ryan woodsmall <rwoodsmall@gmail.com>
 - release no. bump for musl-libc 1.1.21
 
