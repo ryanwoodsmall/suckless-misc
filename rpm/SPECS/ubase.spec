@@ -5,14 +5,14 @@
 
 Name:		ubase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	6%{?dist}
+Release:	7%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.1.22
+BuildRequires:	musl-static >= 1.1.23
 BuildRequires:	git
 
 %description
@@ -33,6 +33,9 @@ sed -i '/^LDFLAGS/d' config.mk
 echo "CC = musl-gcc" >> config.mk
 echo "PREFIX = %{inst_prefix}" >> config.mk
 echo "LDFLAGS = -s -static" >> config.mk
+# XXX - ugh
+#sed -i '/__GLIBC__/s/ifdef/ifndef/g' ls.c tar.c
+echo '#include <sys/sysmacros.h>' >> util.h
 
 
 %build
@@ -59,6 +62,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Jul 17 2019 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for musl 1.1.23
+
 * Thu Apr 11 2019 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.1.22
 
