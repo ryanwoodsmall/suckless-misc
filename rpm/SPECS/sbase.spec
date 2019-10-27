@@ -5,14 +5,14 @@
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	7%{?dist}
+Release:	8%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.1.23
+BuildRequires:	musl-static >= 1.1.24
 BuildRequires:	git
 
 %description
@@ -62,6 +62,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Oct 26 2019 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for musl 1.1.24
+
 * Wed Jul 17 2019 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.1.23
 
