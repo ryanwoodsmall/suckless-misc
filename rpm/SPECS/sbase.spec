@@ -1,4 +1,4 @@
-%define		git_rev_short	92f17ad
+%define		git_rev_short	6ff6bb5
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
 %define		profiled	%{_sysconfdir}/profile.d
