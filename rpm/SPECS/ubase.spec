@@ -5,14 +5,14 @@
 
 Name:		ubase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	9%{?dist}
+Release:	10%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.2.1-0
+BuildRequires:	musl-static >= 1.2.1-1
 BuildRequires:	git
 
 %description
@@ -62,6 +62,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Dec 30 2020 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for musl CVE-2020-28928
+
 * Tue Oct 20 2020 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.1
 
