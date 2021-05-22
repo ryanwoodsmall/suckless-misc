@@ -6,9 +6,12 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	16%{?dist}
+Release:	17%{?dist}
 Summary:	suckless 9base
 Source0:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/%{name}
+Source1:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/lc
+Source2:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/mc
+Source3:	https://raw.githubusercontent.com/ryanwoodsmall/crosware-source-mirror/master/9base/fortunes-dc60de7b64948e89832f03181e6db799060036b8
 
 Group:		System Environment/Shells
 License:	MIT
@@ -54,6 +57,9 @@ mkdir -p %{buildroot}%{profiled}
 echo 'export PLAN9="%{inst_prefix}"' > %{buildroot}%{profiled}/zz_%{name}.sh
 echo 'export PATH="${PATH}:${PLAN9}/bin"' >> %{buildroot}%{profiled}/zz_%{name}.sh
 install -m 755 %SOURCE0 %{buildroot}%{inst_prefix}/bin
+install -m 755 %SOURCE1 %{buildroot}%{inst_prefix}/bin
+install -m 755 %SOURCE2 %{buildroot}%{inst_prefix}/bin
+install -m 644 %SOURCE3 %{buildroot}%{inst_prefix}/lib/fortunes
 ln -s %{inst_prefix}/bin/%{name} %{buildroot}%{inst_prefix}/bin/%{name}-box
 
 
@@ -69,6 +75,12 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri May 21 2021 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for...
+- updated 9base script
+- add mc (via sbase cols) and lc wrappers
+- add fortunes
+
 * Fri Jan 15 2021 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.2
 

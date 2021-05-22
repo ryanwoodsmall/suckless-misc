@@ -6,12 +6,13 @@
 # XXX - shouldn't this be... rc???
 #
 
-if [ "${PLAN9}x" == "x" ] ; then
+export PLAN9=${PLAN9:-/opt/9base}
+if [ -z "${PLAN9}" ] ; then
   echo "PLAN9 environment variable not set" 1>&2
   exit 1
 fi
 
-PLAN9BIN="${PLAN9}/bin"
+export PLAN9BIN="${PLAN9}/bin"
 if [ ! -e "${PLAN9BIN}" ] ; then
   echo "${PLAN9BIN} does not exit" 1>&2
   exit 1
@@ -22,7 +23,7 @@ if [ ${#} -lt 1 ] ; then
   exit
 fi
 
-PLAN9CMD="${PLAN9BIN}/${1}"
+export PLAN9CMD="${PLAN9BIN}/${1}"
 shift
 
 if [ ! -e "${PLAN9CMD}" ] ; then
@@ -30,4 +31,4 @@ if [ ! -e "${PLAN9CMD}" ] ; then
   exit 127
 fi
 
-${PLAN9CMD} "${@}"
+exec ${PLAN9CMD} "${@}"
