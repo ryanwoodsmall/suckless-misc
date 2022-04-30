@@ -64,7 +64,6 @@ rm -rf %{buildroot}
 %changelog
 * Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.3
-- update to c3e47c1
 
 * Fri Jan 15 2021 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.2
