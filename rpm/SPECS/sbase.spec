@@ -1,18 +1,18 @@
-%define		git_rev_short	2c2a7f5
+%define		git_rev_short	c3e47c1
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
 %define		profiled	%{_sysconfdir}/profile.d
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	11%{?dist}
+Release:	12%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.2.2-1
+BuildRequires:	musl-static >= 1.2.3-1
 BuildRequires:	git
 
 %description
@@ -62,6 +62,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
+- release bump for musl 1.2.3
+- update to c3e47c1
+
 * Fri Jan 15 2021 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.2
 
