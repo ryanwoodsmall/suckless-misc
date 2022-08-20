@@ -39,7 +39,7 @@ grep -ril '%{origp9dir}' \
 | xargs sed -i 's#%{origp9dir}#%{inst_prefix}#g'
 sed -i '/^PREFIX/d' config.mk
 sed -i '/^CC/d' config.mk
-echo "CC = musl-gcc" >> config.mk
+echo "CC = musl-gcc -fcommon" >> config.mk
 echo "PREFIX = %{inst_prefix}" >> config.mk
 %ifarch x86_64
 	sed -i '/^OBJTYPE/d' config.mk
@@ -82,6 +82,7 @@ rm -rf %{buildroot}
 * Sat Aug 20 2022 ryanwoodsmall
 - turn off debug
 - source profile
+- add -fcommon
 
 * Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.3
