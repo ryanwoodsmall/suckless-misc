@@ -1,11 +1,13 @@
-%define		git_rev_short	c3e47c1
+%global		debug_package	%{nil}
+
+%define		git_rev_short	63271b
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
 %define		profiled	%{_sysconfdir}/profile.d
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	12%{?dist}
+Release:	13%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
@@ -39,11 +41,13 @@ echo '#include <sys/sysmacros.h>' >> util.h
 
 
 %build
+. /etc/profile
 cd %{_builddir}/%{name}
 make %{name}-box
 
 
 %install
+. /etc/profile
 cd %{_builddir}/%{name}
 make %{name}-box-install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
@@ -62,6 +66,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Aug 20 2022 ryanwoodsmall
+- turn off debug
+- source profile
+
 * Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.3
 

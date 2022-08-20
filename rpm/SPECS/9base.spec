@@ -1,3 +1,5 @@
+%global		debug_package	%{nil}
+
 %define		git_rev_short	63916da
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
@@ -6,7 +8,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	18%{?dist}
+Release:	19%{?dist}
 Summary:	suckless 9base
 Source0:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/%{name}
 Source1:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/lc
@@ -46,11 +48,13 @@ echo "PREFIX = %{inst_prefix}" >> config.mk
 
 
 %build
+. /etc/profile
 cd %{_builddir}/%{name}
 make
 
 
 %install
+. /etc/profile
 cd %{_builddir}/%{name}
 make install DESTDIR=%{buildroot}
 mkdir -p %{buildroot}%{profiled}
@@ -75,6 +79,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Aug 20 2022 ryanwoodsmall
+- turn off debug
+- source profile
+
 * Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
 - release bump for musl 1.2.3
 
