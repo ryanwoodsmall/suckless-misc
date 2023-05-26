@@ -1,20 +1,20 @@
 %global		debug_package	%{nil}
 
-%define		git_rev_short	63271b
+%define		git_rev_short	5304076
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
 %define		profiled	%{_sysconfdir}/profile.d
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	13%{?dist}
+Release:	14%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.2.3-1
+BuildRequires:	musl-static >= 1.2.4-0
 BuildRequires:	git
 
 %description
@@ -66,6 +66,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu May 25 2023 ryanwoodsmall
+- musl 1.2.4
+
 * Sat Aug 20 2022 ryanwoodsmall
 - turn off debug
 - source profile

@@ -8,7 +8,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	19%{?dist}
+Release:	20%{?dist}
 Summary:	suckless 9base
 Source0:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/%{name}
 Source1:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/lc
@@ -19,7 +19,7 @@ Group:		System Environment/Shells
 License:	MIT
 URL:		https://tools.suckless.org/9base
 
-BuildRequires:	musl-static >= 1.2.3-1
+BuildRequires:	musl-static >= 1.2.4-0
 BuildRequires:	git
 
 %description
@@ -79,6 +79,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu May 25 2023 ryanwoodsmall
+- musl 1.2.4
+
 * Sat Aug 20 2022 ryanwoodsmall
 - turn off debug
 - source profile
