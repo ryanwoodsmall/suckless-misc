@@ -1,20 +1,20 @@
 %global		debug_package	%{nil}
 
-%define		git_rev_short	5304076
+%define		git_rev_short	b30fb56
 %define		timestamp	%(date '+%%Y%%m%%d%%H%%M%%S')
 %define		inst_prefix	/opt/%{name}
 %define		profiled	%{_sysconfdir}/profile.d
 
 Name:		sbase
 Version:	%{timestamp}_%{git_rev_short}
-Release:	14%{?dist}
+Release:	15%{?dist}
 Summary:	suckless %{name}
 
 Group:		System Environment/Shells
 License:	MIT
 URL:		https://core.suckless.org/%{name}
 
-BuildRequires:	musl-static >= 1.2.4-0
+BuildRequires:	musl-static >= 1.2.5-0
 BuildRequires:	git
 
 %description
@@ -66,6 +66,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Apr 10 2024 ryanwoodsmall
+- musl 1.2.5
+
 * Thu May 25 2023 ryanwoodsmall
 - musl 1.2.4
 
@@ -73,41 +76,41 @@ rm -rf %{buildroot}
 - turn off debug
 - source profile
 
-* Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Apr 29 2022 ryan woodsmall
 - release bump for musl 1.2.3
 
-* Fri Jan 15 2021 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Jan 15 2021 ryan woodsmall
 - release bump for musl 1.2.2
 
-* Wed Dec 30 2020 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Dec 30 2020 ryan woodsmall
 - release bump for musl CVE-2020-28928
 
-* Tue Oct 20 2020 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Oct 20 2020 ryan woodsmall
 - release bump for musl 1.2.1
 
-* Sat Oct 26 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Sat Oct 26 2019 ryan woodsmall
 - release bump for musl 1.1.24
 
-* Wed Jul 17 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jul 17 2019 ryan woodsmall
 - release bump for musl 1.1.23
 
-* Thu Apr 11 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Thu Apr 11 2019 ryan woodsmall
 - release bump for musl 1.1.22
 
-* Tue Jan 22 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Jan 22 2019 ryan woodsmall
 - release no. bump for musl-libc 1.1.21
 
-* Tue Sep 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Sep 11 2018 ryan woodsmall
 - release no. bump for musl-libc 1.1.20
 
-* Wed Jul 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jul 11 2018 ryan woodsmall
 - release no. bump for buildroot cleanup
 
-* Fri Jun 29 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Jun 29 2018 ryan woodsmall
 - release no. bump for sbase/ubase spec sync
 
-* Thu Feb 22 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Thu Feb 22 2018 ryan woodsmall
 - release no. bump for musl-libc 1.1.19
 
-* Tue Jan  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Jan  9 2018 ryan woodsmall
 - ugly rpm specs for building suckless *base

@@ -8,7 +8,7 @@
 
 Name:		9base
 Version:	%{timestamp}_%{git_rev_short}
-Release:	20%{?dist}
+Release:	21%{?dist}
 Summary:	suckless 9base
 Source0:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/%{name}
 Source1:	https://raw.githubusercontent.com/ryanwoodsmall/suckless-misc/master/bin/lc
@@ -19,7 +19,7 @@ Group:		System Environment/Shells
 License:	MIT
 URL:		https://tools.suckless.org/9base
 
-BuildRequires:	musl-static >= 1.2.4-0
+BuildRequires:	musl-static >= 1.2.5-0
 BuildRequires:	git
 
 %description
@@ -79,6 +79,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Apr 10 2024 ryanwoodsmall
+- musl 1.2.5
+
 * Thu May 25 2023 ryanwoodsmall
 - musl 1.2.4
 
@@ -87,59 +90,59 @@ rm -rf %{buildroot}
 - source profile
 - add -fcommon
 
-* Fri Apr 29 2022 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Apr 29 2022 ryan woodsmall
 - release bump for musl 1.2.3
 
-* Fri May 21 2021 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri May 21 2021 ryan woodsmall
 - release bump for...
 - updated 9base script
 - add mc (via sbase cols) and lc wrappers
 - add fortunes
 
-* Fri Jan 15 2021 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Jan 15 2021 ryan woodsmall
 - release bump for musl 1.2.2
 
-* Wed Dec 30 2020 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Dec 30 2020 ryan woodsmall
 - release bump for musl CVE-2020-28928
 
-* Tue Oct 20 2020 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Oct 20 2020 ryan woodsmall
 - release bump for musl 1.2.1
 
-* Sat Oct 26 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Sat Oct 26 2019 ryan woodsmall
 - release bump for musl 1.1.24
 
-* Wed Jul 17 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jul 17 2019 ryan woodsmall
 - release bump for musl 1.1.23
 
-* Thu Apr 11 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Thu Apr 11 2019 ryan woodsmall
 - release bump for musl 1.1.22
 
-* Tue Jan 22 2019 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Jan 22 2019 ryan woodsmall
 - release no. bump for musl-libc 1.1.21
 
-* Wed Nov 28 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Nov 28 2018 ryan woodsmall
 - make sure we have full url to 9base wrapper
 
-* Tue Sep 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Sep 11 2018 ryan woodsmall
 - release no. bump for musl-libc 1.1.20
 
-* Wed Jul 11 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jul 11 2018 ryan woodsmall
 - release no. bump for buildroot cleanup
 
-* Thu Feb 22 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Thu Feb 22 2018 ryan woodsmall
 - release no. bump for musl-libc 1.1.19
 
-* Sat Feb 17 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Sat Feb 17 2018 ryan woodsmall
 - release no. bump for simpler 9base-box wrapper
 
-* Fri Feb  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Fri Feb  9 2018 ryan woodsmall
 - add 9base sbase-box/ubase-box like wrapper script
 - remove /bin/rc symlink, can be handled with static editline rc
 - https://github.com/ryanwoodsmall/rc-misc
 
-* Wed Jan 10 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Wed Jan 10 2018 ryan woodsmall
 - replace /usr/local/plan9 everywhere
 - add /bin/rc symlink
 
-* Tue Jan  9 2018 ryan woodsmall <rwoodsmall@gmail.com>
+* Tue Jan  9 2018 ryan woodsmall
 - ugly spec for building suckless 9base
